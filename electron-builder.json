@@ -1,0 +1,94 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.nodeorchestrator.app",
+  "productName": "Node Orchestrator",
+  "copyright": "Copyright © 2024 Node Orchestrator Team",
+  "asar": true,
+  "npmRebuild": false,
+  "buildDependenciesFromSource": false,
+  "nodeGypRebuild": false,
+  "directories": {
+    "output": "release",
+    "buildResources": "electron/icons"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "frontend/dist/**/*",
+    "node_modules/**/*",
+    "!node_modules/**/node_modules/**",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "dist",
+      "to": "dist",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "frontend/dist",
+      "to": "frontend/dist",
+      "filter": ["**/*"]
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "electron/icons/icon.ico",
+    "signAndEditExecutable": false,
+    "artifactName": "${productName}-${version}-Windows.${ext}"
+  },
+  "portable": {
+    "artifactName": "${productName}-${version}-Portable.${ext}"
+  },
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "icon": "electron/icons/icon.icns",
+    "category": "public.app-category.developer-tools",
+    "artifactName": "${productName}-${version}-macOS-${arch}.${ext}",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "electron/entitlements.mac.plist",
+    "entitlementsInherit": "electron/entitlements.mac.plist"
+  },
+  "dmg": {
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ],
+    "backgroundColor": "#1a1a2e"
+  },
+  "linux": {
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "electron/icons",
+    "category": "Development",
+    "artifactName": "${productName}-${version}-Linux.${ext}"
+  },
+  "publish": null
+}

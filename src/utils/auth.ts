@@ -50,6 +50,7 @@ export function generateToken(userId: string, role: 'admin' | 'user' = 'user'): 
 
 /**
  * Vérifier et décoder un token
+ * Uses timing-safe comparison to prevent timing attacks
  */
 export function verifyToken(token: string): { valid: boolean; payload?: any; error?: string } {
   try {
@@ -59,13 +60,18 @@ export function verifyToken(token: string): { valid: boolean; payload?: any; err
       return { valid: false, error: 'Format de token invalide' };
     }
     
-    // Vérifier la signature
+    // Vérifier la signature avec comparaison timing-safe
     const expectedSignature = crypto
       .createHmac('sha256', config.security.jwtSecret)
       .update(payloadB64)
       .digest('base64url');
     
-    if (signature !== expectedSignature) {
+    // SECURITY: Use timing-safe comparison to prevent timing attacks
+    const signatureBuffer = Buffer.from(signature, 'base64url');
+    const expectedBuffer = Buffer.from(expectedSignature, 'base64url');
+    
+    if (signatureBuffer.length !== expectedBuffer.length || 
+        !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
       return { valid: false, error: 'Signature invalide' };
     }
     
@@ -101,11 +107,8 @@ export function invalidateToken(token: string): void {
  * Vérifie le token Bearer dans le header Authorization
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  // En mode développement, bypass optionnel (à désactiver en production)
-  if (config.isDev && req.headers['x-bypass-auth'] === 'true') {
-    req.user = { id: 'dev-user', role: 'admin' };
-    return next();
-  }
+  // SECURITY: Development bypass completely removed
+  // All requests must be authenticated regardless of environment
 
   const authHeader = req.headers.authorization;
   

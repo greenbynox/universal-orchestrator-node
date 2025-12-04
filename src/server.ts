@@ -18,6 +18,8 @@ import { nodesRouter, walletsRouter, paymentsRouter, systemRouter } from './api'
 import { WebSocketHandler } from './websocket';
 import { nodeManager } from './core/NodeManager';
 import { paymentManager } from './core/PaymentManager';
+import { requireAuth } from './utils/auth';
+import blockchainsRouter from './routes/blockchains';
 
 // ============================================================
 // EXPRESS APP SETUP
@@ -26,19 +28,43 @@ import { paymentManager } from './core/PaymentManager';
 const app: Application = express();
 const httpServer = createServer(app);
 
-// Middleware de sécurité
+// Middleware de sécurité avec CSP activé
 app.use(helmet({
-  contentSecurityPolicy: false, // Désactivé pour permettre le frontend
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Required for React dev
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "ws:", "wss:", "http://localhost:*", "https://api.coingecko.com"],
+      fontSrc: ["'self'", "https:", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
 }));
 
-// CORS
+// CORS with strict origin control
+const allowedOrigins = config.isDev 
+  ? ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173']
+  : (process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000']);
+
 app.use(cors({
-  origin: config.isDev ? '*' : ['http://localhost:3000', 'http://localhost:5173'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   credentials: true,
 }));
 
-// Rate limiting
+// Rate limiting - stricter for sensitive endpoints
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 200, // 200 requêtes par fenêtre
@@ -46,18 +72,30 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Body parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Stricter rate limit for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10, // Only 10 auth attempts per 15 minutes
+  message: 'Trop de tentatives, veuillez réessayer plus tard',
+});
+app.use('/api/auth', authLimiter);
+
+// Body parser with size limits
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // ============================================================
 // ROUTES API
 // ============================================================
 
-app.use('/api/nodes', nodesRouter);
-app.use('/api/wallets', walletsRouter);
-app.use('/api/payments', paymentsRouter);
+// Public routes (no auth required)
 app.use('/api/system', systemRouter);
+app.use('/api/blockchains', blockchainsRouter);
+
+// Protected routes (authentication required)
+app.use('/api/nodes', requireAuth, nodesRouter);
+app.use('/api/wallets', requireAuth, walletsRouter);
+app.use('/api/payments', requireAuth, paymentsRouter);
 
 // Route de base
 app.get('/api', (_req: Request, res: Response) => {
@@ -65,13 +103,20 @@ app.get('/api', (_req: Request, res: Response) => {
     name: 'Node Orchestrator API',
     version: '1.0.0',
     status: 'running',
+    authenticated: false,
     endpoints: {
-      nodes: '/api/nodes',
-      wallets: '/api/wallets',
-      payments: '/api/payments',
+      nodes: '/api/nodes (auth required)',
+      wallets: '/api/wallets (auth required)',
+      payments: '/api/payments (auth required)',
       system: '/api/system',
+      blockchains: '/api/blockchains',
     },
   });
+});
+
+// Health check endpoint (public)
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
 // ============================================================
