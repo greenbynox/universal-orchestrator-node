@@ -11,6 +11,7 @@ import { nodeManager } from '../core/NodeManager';
 import { BlockchainType, NodeMode, CreateNodeRequest, ApiResponse } from '../types';
 import { logger } from '../utils/logger';
 import { recommendNodeMode, getSystemResources, getAllRecommendations } from '../utils/system';
+import { sanitizeInput, validateNodeId } from '../utils/validation';
 
 const router: RouterType = Router();
 
@@ -90,7 +91,16 @@ router.get('/counts', async (_req: Request, res: Response) => {
 // ============================================================
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const node = nodeManager.getNode(req.params.id);
+    const nodeId = sanitizeInput(req.params.id);
+    if (!validateNodeId(nodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de node invalide',
+        timestamp: new Date(),
+      });
+    }
+    
+    const node = nodeManager.getNode(nodeId);
     
     if (!node) {
       return res.status(404).json({
@@ -121,6 +131,9 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, blockchain, mode, customConfig } = req.body as CreateNodeRequest;
     
+    // Sanitize inputs
+    const sanitizedName = name ? sanitizeInput(name, 100) : undefined;
+    
     // Validation
     if (!blockchain) {
       return res.status(400).json({
@@ -141,7 +154,7 @@ router.post('/', async (req: Request, res: Response) => {
     
     // Créer le node
     const node = await nodeManager.createNode({
-      name,
+      name: sanitizedName,
       blockchain,
       mode: mode as NodeMode,
       customConfig,

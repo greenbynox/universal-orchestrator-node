@@ -211,7 +211,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 
 /** Requête de création de node */
 export interface CreateNodeRequest {
-  name: string;
+  name?: string;
   blockchain: BlockchainType;
   mode?: NodeMode;
   customConfig?: Record<string, unknown>;
@@ -219,7 +219,7 @@ export interface CreateNodeRequest {
 
 /** Requête de création de wallet */
 export interface CreateWalletRequest {
-  name: string;
+  name?: string;
   blockchain: BlockchainType;
   importSeed?: string;
 }
