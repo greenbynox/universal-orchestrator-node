@@ -143,6 +143,11 @@ export class NodeManager extends EventEmitter {
     if (!resourceCheck.canRun) {
       throw new Error(resourceCheck.reason);
     }
+    
+    // Log le warning si présent (mais continue la création)
+    if (resourceCheck.warning) {
+      logger.warn(resourceCheck.warning);
+    }
 
     // Générer les ports
     const existingPorts = Array.from(this.nodes.values())

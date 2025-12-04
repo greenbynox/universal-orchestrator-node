@@ -119,11 +119,13 @@ export async function recommendNodeMode(
 
 /**
  * Vérifier si le système peut supporter un node
+ * Note: On vérifie la RAM TOTALE du système, pas la RAM disponible actuellement
+ * car Windows peut libérer de la RAM quand nécessaire
  */
 export async function canRunNode(
   blockchain: BlockchainType,
   mode: NodeMode
-): Promise<{ canRun: boolean; reason?: string }> {
+): Promise<{ canRun: boolean; reason?: string; warning?: string }> {
   const resources = await getSystemResources();
   const config = BLOCKCHAIN_CONFIGS[blockchain];
   const requirements = config.requirements[mode];
@@ -135,10 +137,19 @@ export async function canRunNode(
     };
   }
 
-  if (resources.availableMemoryGB < requirements.memoryGB) {
+  // Vérifier la RAM TOTALE du système (pas la RAM disponible actuellement)
+  if (resources.totalMemoryGB < requirements.memoryGB) {
     return {
       canRun: false,
-      reason: `Mémoire insuffisante. Requis: ${requirements.memoryGB}GB, Disponible: ${resources.availableMemoryGB}GB`,
+      reason: `Mémoire RAM totale insuffisante. Requis: ${requirements.memoryGB}GB, Votre système: ${resources.totalMemoryGB}GB`,
+    };
+  }
+
+  // Si la RAM disponible est faible, on avertit mais on ne bloque pas
+  if (resources.availableMemoryGB < requirements.memoryGB * 0.5) {
+    return {
+      canRun: true,
+      warning: `RAM disponible faible (${resources.availableMemoryGB}GB). Fermez des applications pour de meilleures performances.`,
     };
   }
 

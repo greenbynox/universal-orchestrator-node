@@ -47,6 +47,18 @@ export type ConsensusType =
   | 'pbft'          // Practical Byzantine Fault Tolerance
   | 'dag'           // Directed Acyclic Graph
   | 'hybrid'        // Hybride
+  | 'optimistic'    // Optimistic Rollups (Optimism, Arbitrum One)
+  | 'zk'            // Zero-Knowledge Rollups (zkSync, Scroll)
+  | 'arbitrum'      // Arbitrum Nitro specific
+  | 'fba'           // Federated Byzantine Agreement (Stellar)
+  | 'spos'          // Secure Proof of Stake (Elrond/MultiversX)
+  | 'dpow'          // Delayed Proof of Work (Komodo)
+  | 'satoshi-plus'  // Core DAO consensus
+  | 'proof-of-history' // Solana PoH
+  | 'tendermint'    // Cosmos Tendermint BFT
+  | 'aura'          // Polkadot Aura
+  | 'grandpa'       // Polkadot GRANDPA
+  | 'raft'          // Raft consensus
   | 'other';
 
 /** Mode de synchronisation du node */
@@ -169,6 +181,18 @@ export interface BlockchainFeatures {
   eip1559?: boolean;            // Pour EVM
   segwit?: boolean;             // Pour UTXO
   taproot?: boolean;            // Pour Bitcoin
+  // New features for L2 and Bitcoin variants
+  shieldedTransactions?: boolean; // ZCash-like privacy
+  instantSend?: boolean;        // DASH InstantSend
+  assets?: boolean;             // Native asset support (Ravencoin, Digibyte)
+  masterNodes?: boolean;        // Masternode support
+  atomicSwaps?: boolean;        // Cross-chain atomic swaps
+  confidentialAssets?: boolean; // Liquid-like confidential assets
+  lightning?: boolean;          // Lightning Network support
+  rgb?: boolean;                // RGB smart contracts (Bitcoin)
+  ordinals?: boolean;           // Bitcoin Ordinals/Inscriptions
+  brc20?: boolean;              // BRC-20 tokens
+  runes?: boolean;              // Bitcoin Runes
 }
 
 // ============================================================
