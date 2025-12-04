@@ -210,6 +210,8 @@ function startBackend() {
       NODE_ENV: 'production',
       PORT: BACKEND_PORT.toString(),
       DATA_PATH: getDataPath(),
+      ELECTRON_RUN_AS_NODE: '1',
+      RESOURCES_PATH: app.isPackaged ? process.resourcesPath : path.join(__dirname, '..'),
     };
 
     // Ensure data directory exists
@@ -218,35 +220,58 @@ function startBackend() {
     }
 
     console.log('Starting backend server:', serverPath);
+    console.log('Data path:', getDataPath());
+    console.log('Is packaged:', app.isPackaged);
 
-    backendProcess = fork(serverPath, [], {
+    // Use Electron's Node.js to run the server
+    const nodePath = process.execPath;
+    
+    backendProcess = spawn(nodePath, [serverPath], {
       env,
-      stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+      stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: app.isPackaged ? process.resourcesPath : path.join(__dirname, '..'),
     });
 
+    let startupLogs = [];
+
     backendProcess.stdout.on('data', (data) => {
-      console.log('[Backend]', data.toString());
+      const log = data.toString();
+      console.log('[Backend]', log);
+      startupLogs.push(log);
     });
 
     backendProcess.stderr.on('data', (data) => {
-      console.error('[Backend Error]', data.toString());
+      const log = data.toString();
+      console.error('[Backend Error]', log);
+      startupLogs.push('[ERROR] ' + log);
     });
 
     backendProcess.on('error', (error) => {
       console.error('Backend error:', error);
-      reject(error);
+      reject(new Error(`Backend process error: ${error.message}`));
     });
 
     backendProcess.on('exit', (code) => {
       console.log('Backend exited with code:', code);
       if (!isQuitting && code !== 0) {
+        console.log('Startup logs:', startupLogs.join('\n'));
         // Restart backend on crash
         setTimeout(() => startBackend(), 3000);
       }
     });
 
     // Wait for backend to be ready
+    let attempts = 0;
+    const maxAttempts = 60; // 30 seconds max
+    
     const checkServer = () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        console.error('Backend startup logs:', startupLogs.join('\n'));
+        reject(new Error(`Backend startup timeout after ${maxAttempts * 500}ms. Check logs above.`));
+        return;
+      }
+      
       http.get(`http://localhost:${BACKEND_PORT}/api/health`, (res) => {
         if (res.statusCode === 200) {
           console.log('Backend is ready!');
@@ -254,18 +279,14 @@ function startBackend() {
         } else {
           setTimeout(checkServer, 500);
         }
-      }).on('error', () => {
+      }).on('error', (err) => {
+        console.log(`Backend check attempt ${attempts}/${maxAttempts}: ${err.code}`);
         setTimeout(checkServer, 500);
       });
     };
 
     // Start checking after short delay
     setTimeout(checkServer, 1000);
-
-    // Timeout after 30 seconds
-    setTimeout(() => {
-      reject(new Error('Backend startup timeout'));
-    }, 30000);
   });
 }
 
