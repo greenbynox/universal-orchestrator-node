@@ -337,7 +337,7 @@ Version Premium disponible avec fonctionnalités étendues.
 ## 📞 Support
 
 - 📧 Email: support@node-orchestrator.io
-- 💬 Discord: [Rejoindre le serveur](https://discord.gg/node-orchestrator)
+- 💬 Discord: [Rejoindre le serveur](https://discord.gg/AH93eHVQGU)
 - 📖 Documentation: [docs.node-orchestrator.io](https://docs.node-orchestrator.io)
 
 ---
