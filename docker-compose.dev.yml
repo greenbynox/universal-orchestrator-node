@@ -1,0 +1,52 @@
+version: '3.8'
+
+# Configuration Docker Compose pour le développement local
+
+services:
+  # Backend en mode dev avec hot reload
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: orchestrator-backend-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      # Hot reload du code source
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      # Docker socket pour gérer les containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Données persistantes
+      - ./data:/app/data
+    networks:
+      - orchestrator-dev-network
+    command: npm run dev
+
+  # Frontend en mode dev avec Vite HMR
+  frontend:
+    image: node:20-alpine
+    container_name: orchestrator-frontend-dev
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    networks:
+      - orchestrator-dev-network
+    command: sh -c "npm install && npm run dev -- --host"
+
+networks:
+  orchestrator-dev-network:
+    driver: bridge
+
+volumes:
+  frontend-node-modules:

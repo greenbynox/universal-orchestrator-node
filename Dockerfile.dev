@@ -1,0 +1,24 @@
+# Dockerfile pour le développement
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Installer Docker CLI
+RUN apk add --no-cache docker-cli
+
+# Copier les fichiers de dépendances
+COPY package*.json ./
+RUN npm install
+
+# Copier le code source
+COPY tsconfig.json ./
+COPY src ./src
+
+# Créer les dossiers de données
+RUN mkdir -p data/nodes data/wallets data/logs
+
+# Exposer le port
+EXPOSE 3000
+
+# Mode dev avec hot reload
+CMD ["npm", "run", "dev"]

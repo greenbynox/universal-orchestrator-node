@@ -1,0 +1,111 @@
+version: '3.8'
+
+# ============================================================
+# ⚠️  SECURITY WARNING - AVERTISSEMENT DE SÉCURITÉ ⚠️
+# ============================================================
+# DO NOT mount /var/run/docker.sock in production!
+# NE MONTEZ PAS /var/run/docker.sock en production!
+#
+# The docker.sock gives root-equivalent access to the host.
+# For production deployments, use one of these alternatives:
+#
+# 1. Docker TLS remote API:
+#    - Configure Docker daemon with TLS certificates
+#    - Set DOCKER_HOST=tcp://docker-host:2376
+#    - Mount TLS certs instead of socket
+#
+# 2. Run orchestrator on host:
+#    - Run the Node.js application directly on the host
+#    - Not inside a container
+#
+# 3. Use Docker-in-Docker (dind) with proper isolation
+# ============================================================
+
+services:
+  # Application principale
+  orchestrator:
+    build: .
+    container_name: node-orchestrator
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - PAYMENT_ADDRESS_BTC=${PAYMENT_ADDRESS_BTC}
+      - PAYMENT_ADDRESS_ETH=${PAYMENT_ADDRESS_ETH}
+      - PAYMENT_ADDRESS_USDC=${PAYMENT_ADDRESS_USDC}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
+      # For Docker TLS remote API (production):
+      # - DOCKER_HOST=tcp://docker-host:2376
+      # - DOCKER_TLS_VERIFY=1
+    volumes:
+      # ⚠️ DEVELOPMENT ONLY - Remove in production!
+      # For production, use Docker TLS remote API or run on host
+      # - /var/run/docker.sock:/var/run/docker.sock
+      
+      # For Docker TLS (production):
+      # - ./certs/docker:/certs/docker:ro
+      
+      # Données persistantes
+      - orchestrator-data:/app/data
+    networks:
+      - orchestrator-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/system/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # Redis pour cache et sessions (optionnel)
+  redis:
+    image: redis:7-alpine
+    container_name: orchestrator-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - orchestrator-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Watchtower pour mise à jour auto des images (optionnel)
+  watchtower:
+    image: containrrr/watchtower
+    container_name: orchestrator-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400
+    networks:
+      - orchestrator-network
+    profiles:
+      - production
+
+networks:
+  orchestrator-network:
+    driver: bridge
+    name: orchestrator-network
+
+volumes:
+  orchestrator-data:
+    name: orchestrator-data
+  redis-data:
+    name: orchestrator-redis-data
