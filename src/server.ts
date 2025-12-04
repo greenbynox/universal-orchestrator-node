@@ -124,7 +124,19 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // ============================================================
 
 if (!config.isDev) {
-  const frontendPath = path.join(__dirname, '../frontend/dist');
+  // Determine frontend path - works both for standalone and Electron packaged
+  let frontendPath: string;
+  
+  if (process.env.ELECTRON_RUN_AS_NODE) {
+    // Running inside Electron packaged app - use resourcesPath
+    const resourcesPath = process.env.RESOURCES_PATH || path.join(__dirname, '..');
+    frontendPath = path.join(resourcesPath, 'frontend/dist');
+  } else {
+    // Standalone Node.js
+    frontendPath = path.join(__dirname, '../frontend/dist');
+  }
+  
+  logger.info(`Serving frontend from: ${frontendPath}`);
   app.use(express.static(frontendPath));
   
   app.get('*', (_req: Request, res: Response) => {
