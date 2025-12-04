@@ -124,7 +124,9 @@ export const blockchainRegistry = new BlockchainRegistry();
 
 // Layer 1 - Principales
 import { LAYER1_CHAINS } from './chains/layer1';
+import { BITCOIN_VARIANTS } from './chains/bitcoin-variants';
 import { EVM_CHAINS } from './chains/evm';
+import { ADDITIONAL_EVM_CHAINS } from './chains/additional-evm';
 import { LAYER2_CHAINS } from './chains/layer2';
 import { PRIVACY_CHAINS } from './chains/privacy';
 import { DEFI_CHAINS } from './chains/defi';
@@ -141,7 +143,9 @@ import { NFT_CHAINS } from './chains/nft';
 // Enregistrer toutes les blockchains
 blockchainRegistry.registerMany([
   ...LAYER1_CHAINS,
+  ...BITCOIN_VARIANTS,
   ...EVM_CHAINS,
+  ...ADDITIONAL_EVM_CHAINS,
   ...LAYER2_CHAINS,
   ...PRIVACY_CHAINS,
   ...DEFI_CHAINS,
