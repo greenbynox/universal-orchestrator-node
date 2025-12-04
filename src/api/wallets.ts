@@ -10,8 +10,17 @@ import type { Router as RouterType } from 'express';
 import { walletManager } from '../core/WalletManager';
 import { BlockchainType, CreateWalletRequest } from '../types';
 import { logger } from '../utils/logger';
+import { sanitizeInput, validateWalletId, validatePassword, validateSeedPhrase } from '../utils/validation';
+import rateLimit from 'express-rate-limit';
 
 const router: RouterType = Router();
+
+// Rate limiter spécifique pour l'export de seed (opération sensible)
+const seedExportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 3, // Maximum 3 exports par heure
+  message: 'Trop de tentatives d\'export. Réessayez dans 1 heure.',
+});
 
 // ============================================================
 // GET /wallets - Liste tous les wallets
@@ -40,7 +49,16 @@ router.get('/', async (_req: Request, res: Response) => {
 // ============================================================
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const wallet = walletManager.getWallet(req.params.id);
+    const walletId = sanitizeInput(req.params.id);
+    if (!validateWalletId(walletId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de wallet invalide',
+        timestamp: new Date(),
+      });
+    }
+    
+    const wallet = walletManager.getWallet(walletId);
     
     if (!wallet) {
       return res.status(404).json({
@@ -157,8 +175,17 @@ router.get('/:id/balance', async (req: Request, res: Response) => {
 // ============================================================
 // POST /wallets/:id/export-seed - Exporter la seed (sensible!)
 // ============================================================
-router.post('/:id/export-seed', async (req: Request, res: Response) => {
+router.post('/:id/export-seed', seedExportLimiter, async (req: Request, res: Response) => {
   try {
+    const walletId = sanitizeInput(req.params.id);
+    if (!validateWalletId(walletId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de wallet invalide',
+        timestamp: new Date(),
+      });
+    }
+    
     const { password } = req.body;
     
     if (!password) {
@@ -169,10 +196,20 @@ router.post('/:id/export-seed', async (req: Request, res: Response) => {
       });
     }
     
-    const seed = walletManager.exportSeed(req.params.id, password);
+    // Valider le mot de passe
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: passwordValidation.reason,
+        timestamp: new Date(),
+      });
+    }
+    
+    const seed = walletManager.exportSeed(walletId, password);
     
     // Attention: cette opération est sensible
-    logger.warn(`Seed exportée pour wallet ${req.params.id}`);
+    logger.warn(`Seed exportée pour wallet ${walletId}`, { ip: req.ip });
     
     res.json({
       success: true,
