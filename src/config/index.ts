@@ -27,10 +27,26 @@ export const config = {
     host: process.env.HOST || '0.0.0.0',
   },
   
-  // Sécurité
+  // Sécurité - CRITICAL: These MUST be set in production
   security: {
-    jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-me',
-    encryptionKey: process.env.ENCRYPTION_KEY || 'dev-encryption-key-32chars!!',
+    jwtSecret: (() => {
+      const secret = process.env.JWT_SECRET;
+      if (!secret && process.env.NODE_ENV === 'production') {
+        throw new Error('CRITICAL: JWT_SECRET must be set in production!');
+      }
+      return secret || 'dev-secret-change-me-' + require('crypto').randomBytes(16).toString('hex');
+    })(),
+    encryptionKey: (() => {
+      const key = process.env.ENCRYPTION_KEY;
+      if (!key && process.env.NODE_ENV === 'production') {
+        throw new Error('CRITICAL: ENCRYPTION_KEY must be set in production!');
+      }
+      // Key must be exactly 32 characters for AES-256
+      if (key && key.length !== 32) {
+        throw new Error('ENCRYPTION_KEY must be exactly 32 characters');
+      }
+      return key || require('crypto').randomBytes(16).toString('hex');
+    })(),
   },
   
   // Chemins

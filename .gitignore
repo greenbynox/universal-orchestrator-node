@@ -11,3 +11,14 @@ coverage/
 frontend/node_modules/
 frontend/dist/
 frontend/.env.local
+
+# Release builds (too large for GitHub)
+release/
+*.exe
+*.dmg
+*.AppImage
+*.app
+
+# Temp files
+response.json
+root.html
