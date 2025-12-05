@@ -7,7 +7,6 @@
 
 const { app, BrowserWindow, ipcMain, dialog, Menu, Tray, shell } = require('electron');
 const path = require('path');
-const { spawn, fork } = require('child_process');
 const fs = require('fs');
 const http = require('http');
 
@@ -22,7 +21,7 @@ const FRONTEND_PORT = isDev ? 5173 : 3001;
 let mainWindow = null;
 let splashWindow = null;
 let tray = null;
-let backendProcess = null;
+let expressServer = null;
 let isQuitting = false;
 
 // ============================================================
@@ -197,104 +196,72 @@ function createTray() {
 }
 
 // ============================================================
-// BACKEND SERVER
+// BACKEND SERVER - Embedded Express
 // ============================================================
 
 function startBackend() {
   return new Promise((resolve, reject) => {
-    const serverPath = getResourcePath('dist/server.js');
-    
-    // Set environment variables
-    const env = {
-      ...process.env,
-      NODE_ENV: 'production',
-      PORT: BACKEND_PORT.toString(),
-      DATA_PATH: getDataPath(),
-      ELECTRON_RUN_AS_NODE: '1',
-      RESOURCES_PATH: app.isPackaged ? process.resourcesPath : path.join(__dirname, '..'),
-    };
+    try {
+      // Set environment variables BEFORE requiring modules
+      process.env.NODE_ENV = 'production';
+      process.env.PORT = BACKEND_PORT.toString();
+      process.env.DATA_PATH = getDataPath();
+      process.env.RESOURCES_PATH = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..');
 
-    // Ensure data directory exists
-    if (!fs.existsSync(getDataPath())) {
-      fs.mkdirSync(getDataPath(), { recursive: true });
-    }
-
-    console.log('Starting backend server:', serverPath);
-    console.log('Data path:', getDataPath());
-    console.log('Is packaged:', app.isPackaged);
-
-    // Use Electron's Node.js to run the server
-    const nodePath = process.execPath;
-    
-    backendProcess = spawn(nodePath, [serverPath], {
-      env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: app.isPackaged ? process.resourcesPath : path.join(__dirname, '..'),
-    });
-
-    let startupLogs = [];
-
-    backendProcess.stdout.on('data', (data) => {
-      const log = data.toString();
-      console.log('[Backend]', log);
-      startupLogs.push(log);
-    });
-
-    backendProcess.stderr.on('data', (data) => {
-      const log = data.toString();
-      console.error('[Backend Error]', log);
-      startupLogs.push('[ERROR] ' + log);
-    });
-
-    backendProcess.on('error', (error) => {
-      console.error('Backend error:', error);
-      reject(new Error(`Backend process error: ${error.message}`));
-    });
-
-    backendProcess.on('exit', (code) => {
-      console.log('Backend exited with code:', code);
-      if (!isQuitting && code !== 0) {
-        console.log('Startup logs:', startupLogs.join('\n'));
-        // Restart backend on crash
-        setTimeout(() => startBackend(), 3000);
+      // Ensure data directory exists
+      if (!fs.existsSync(getDataPath())) {
+        fs.mkdirSync(getDataPath(), { recursive: true });
       }
-    });
 
-    // Wait for backend to be ready
-    let attempts = 0;
-    const maxAttempts = 60; // 30 seconds max
-    
-    const checkServer = () => {
-      attempts++;
-      if (attempts > maxAttempts) {
-        console.error('Backend startup logs:', startupLogs.join('\n'));
-        reject(new Error(`Backend startup timeout after ${maxAttempts * 500}ms. Check logs above.`));
-        return;
-      }
+      console.log('Starting embedded backend server...');
+      console.log('Data path:', getDataPath());
+      console.log('Resources path:', process.env.RESOURCES_PATH);
+      console.log('Is packaged:', app.isPackaged);
+
+      // Use simplified embedded server
+      const serverPath = path.join(__dirname, 'start-server.js');
+      console.log('Server path:', serverPath);
       
-      http.get(`http://localhost:${BACKEND_PORT}/api/health`, (res) => {
-        if (res.statusCode === 200) {
-          console.log('Backend is ready!');
-          resolve();
-        } else {
-          setTimeout(checkServer, 500);
+      // Import and start the server
+      require(serverPath);
+      
+      // Wait for server to be ready
+      let attempts = 0;
+      const maxAttempts = 60;
+      
+      const checkServer = () => {
+        attempts++;
+        if (attempts > maxAttempts) {
+          reject(new Error(`Backend startup timeout after ${maxAttempts * 500}ms`));
+          return;
         }
-      }).on('error', (err) => {
-        console.log(`Backend check attempt ${attempts}/${maxAttempts}: ${err.code}`);
-        setTimeout(checkServer, 500);
-      });
-    };
+        
+        http.get(`http://localhost:${BACKEND_PORT}/api/health`, (res) => {
+          if (res.statusCode === 200) {
+            console.log('Backend is ready!');
+            resolve();
+          } else {
+            setTimeout(checkServer, 500);
+          }
+        }).on('error', (err) => {
+          console.log(`Backend check attempt ${attempts}/${maxAttempts}: ${err.code}`);
+          setTimeout(checkServer, 500);
+        });
+      };
 
-    // Start checking after short delay
-    setTimeout(checkServer, 1000);
+      // Start checking after short delay
+      setTimeout(checkServer, 500);
+      
+    } catch (error) {
+      console.error('Failed to start backend:', error);
+      reject(error);
+    }
   });
 }
 
 function stopBackend() {
-  if (backendProcess) {
-    backendProcess.kill('SIGTERM');
-    backendProcess = null;
-  }
+  // Server runs in same process, will stop with app
+  console.log('Backend stopping with app...');
 }
 
 // ============================================================
