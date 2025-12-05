@@ -2,10 +2,10 @@ name: Build Executables
 
 on:
   push:
-    branches: [main, 'release/**']
+    branches: [main, master, 'release/**', 'hardening/**']
     tags: ['v*']
   pull_request:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
     inputs:
       build_all:
@@ -111,7 +111,7 @@ jobs:
           retention-days: 30
 
   # ============================================================
-  # BUILD LINUX EXECUTABLE
+  # BUILD LINUX EXECUTABLE (x64 + ARM64)
   # ============================================================
   build-linux:
     name: Build Linux
@@ -142,7 +142,7 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Build Linux executable
+      - name: Build Linux executables (x64 + arm64)
         run: npm run dist:linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -153,6 +153,8 @@ jobs:
           name: Node-Orchestrator-Linux
           path: |
             release/*.AppImage
+            release/*.deb
+            release/*.tar.gz
           retention-days: 30
 
   # ============================================================
@@ -200,5 +202,7 @@ jobs:
             ./release/macos/*.dmg
             ./release/macos/*.zip
             ./release/linux/*.AppImage
+            ./release/linux/*.deb
+            ./release/linux/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
