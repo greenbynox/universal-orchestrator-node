@@ -82,6 +82,7 @@
     "@types/systeminformation": "^3.23.1",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.10",
+    "app-builder-bin": "^4.2.0",
     "concurrently": "^8.2.2",
     "cross-env": "^10.1.0",
     "electron": "^39.2.5",
