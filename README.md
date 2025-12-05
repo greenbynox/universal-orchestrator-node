@@ -1,46 +1,121 @@
 # 🚀 Node Orchestrator
 
-**MVP d'Orchestrateur de Nodes Multi-Blockchains**
+<div align="center">
+
+**Orchestrateur de Nodes Multi-Blockchains - 100% Gratuit & Open Source**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://reactjs.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
+[![Electron](https://img.shields.io/badge/Electron-39-47848F.svg)](https://www.electronjs.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Free](https://img.shields.io/badge/Price-100%25%20FREE-brightgreen.svg)]()
+[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA.svg)](https://discord.gg/AH93eHVQGU)
 
-Une plateforme intuitive pour déployer, gérer et monitorer des nodes blockchain en un clic.
+<br>
 
-![Dashboard Preview](docs/dashboard-preview.png)
+🎉 **100% GRATUIT** - Aucune limite, aucune version payante. Ce projet est fait par et pour la communauté blockchain.
+
+[📥 Télécharger](#-téléchargement) • [📖 Documentation](#-utilisation) • [💬 Discord](https://discord.gg/AH93eHVQGU) • [🐛 Issues](https://github.com/greenbynox/universal-orchestrator-node/issues)
+
+</div>
 
 ---
 
-## ✨ Fonctionnalités
+## 🌟 Pourquoi Node Orchestrator ?
 
-### 🔗 Blockchains Supportées
-- **Bitcoin (BTC)** - Full node, Pruned, Light
-- **Ethereum (ETH)** - Full node, Pruned, Light  
-- **Solana (SOL)** - Validator, RPC
-- **Monero (XMR)** - Full node, Pruned
-- **BNB Chain (BNB)** - Full node, Light
+Nous croyons que tout le monde devrait pouvoir participer à la décentralisation des blockchains. C'est pourquoi Node Orchestrator est **entièrement gratuit**, sans limites cachées.
+
+| ✅ Vraiment gratuit | ✅ Open Source | ✅ 205 blockchains | ✅ Sécurisé |
+|:---:|:---:|:---:|:---:|
+| Pas de freemium | Code transparent | Support le + large | AES-256-GCM |
+
+---
+
+## ✨ Fonctionnalités v1.0.0
+
+### 🔗 205+ Blockchains Supportées
+
+<table>
+<tr>
+<td><b>🏆 Majeures</b></td>
+<td>Bitcoin, Ethereum, Solana, Monero, BNB Chain, Cardano, Polkadot, Avalanche, Polygon, Cosmos, NEAR, Algorand, Tezos, TON, Sui, Aptos...</td>
+</tr>
+<tr>
+<td><b>⚡ Layer 2</b></td>
+<td>Arbitrum, Optimism, Base, zkSync Era, Linea, Scroll, Blast, Manta, Mode, Mantle, Starknet, Taiko...</td>
+</tr>
+<tr>
+<td><b>🔷 EVM</b></td>
+<td>Fantom, Cronos, Harmony, Klaytn, Celo, Aurora, Moonbeam, Metis, Boba, Evmos, Kava, Gnosis...</td>
+</tr>
+<tr>
+<td><b>🔒 Privacy</b></td>
+<td>Monero, Zcash, Dash, Firo, Beam, Horizen, Grin, PIVX, Secret Network...</td>
+</tr>
+<tr>
+<td><b>🌌 Cosmos</b></td>
+<td>Osmosis, Juno, Injective, Sei, Celestia, Dymension, Stargaze, Akash, Axelar...</td>
+</tr>
+<tr>
+<td><b>🎮 Gaming</b></td>
+<td>Immutable X, Gala, Axie Infinity, The Sandbox, Decentraland, Ronin, Enjin...</td>
+</tr>
+</table>
 
 ### 🎯 Fonctionnalités Clés
-- ✅ **Déploiement en 1 clic** - Installer et lancer un node en quelques secondes
-- ✅ **Multi-instances** - Plusieurs nodes de la même blockchain avec isolation complète
-- ✅ **Monitoring temps réel** - CPU, RAM, stockage, logs en direct via WebSocket
-- ✅ **Auto-détection** - Recommandation automatique du mode (Full/Pruned/Light) selon vos ressources
-- ✅ **Wallets HD** - Génération de portefeuilles BIP39/BIP44 avec chiffrement AES
-- ✅ **Paiements Crypto** - Accepte BTC, ETH, USDC pour les abonnements premium
-- ✅ **Architecture Plugin** - Facilement extensible pour de nouvelles blockchains
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| 🖱️ **Déploiement 1-clic** | Créer un node en quelques secondes |
+| ♾️ **Illimité** | Autant de nodes que votre machine supporte |
+| 💼 **Wallets HD** | Génération BIP39 avec chiffrement AES-256-GCM |
+| 🔐 **Sécurité** | Chiffrement des seeds, rate limiting, input sanitization |
+| 📊 **Monitoring** | CPU, RAM, Disque en temps réel |
+| 🖥️ **Desktop App** | Application Windows native (Electron) |
+| ₿ **Types Bitcoin** | Legacy, SegWit, Native SegWit (bc1q), Taproot (bc1p) |
+
+---
+
+## 📥 Téléchargement
+
+### Windows (Recommandé)
+
+> **[📥 Télécharger Node Orchestrator v1.0.0 (Windows)](https://github.com/greenbynox/universal-orchestrator-node/releases)**
+
+- `Node Orchestrator-1.0.0-Setup.exe` - Installateur Windows
+- `Node Orchestrator-1.0.0-Portable.exe` - Version portable (aucune installation)
+
+### Depuis les sources
+
+```bash
+# Cloner le repo
+git clone https://github.com/greenbynox/universal-orchestrator-node.git
+cd universal-orchestrator-node
+
+# Installer les dépendances
+npm install
+
+# Installer les dépendances frontend
+cd frontend && npm install && cd ..
+
+# Lancer en mode développement
+npm run dev
+```
 
 ---
 
 ## 📋 Prérequis
 
-- **Node.js** 20+ 
-- **Docker** 20+ avec Docker Compose
-- **RAM** 4GB minimum (8GB+ recommandé pour plusieurs nodes)
-- **Stockage** Variable selon les nodes (voir tableau ci-dessous)
+| Composant | Minimum | Recommandé |
+|-----------|---------|------------|
+| **OS** | Windows 10 | Windows 11 |
+| **RAM** | 4 GB | 8+ GB |
+| **CPU** | 2 cores | 4+ cores |
+| **Disque** | 10 GB | Variable selon nodes |
+| **Node.js** | 18+ | 20+ (pour dev) |
 
-### Espace Disque par Blockchain
+### Espace Disque par Blockchain (pour nodes complets)
 
 | Blockchain | Full Node | Pruned | Light |
 |------------|-----------|--------|-------|
@@ -48,85 +123,6 @@ Une plateforme intuitive pour déployer, gérer et monitorer des nodes blockchai
 | Ethereum | 1 TB+ | 200-500 GB | < 1 GB |
 | Solana | 500 GB+ | - | - |
 | Monero | 150 GB+ | 30 GB | - |
-| BNB Chain | 500 GB+ | - | < 1 GB |
-
----
-
-## 🚀 Installation Rapide
-
-### Option 1: Docker (Recommandé)
-
-```bash
-# Cloner le repo
-git clone https://github.com/your-username/node-orchestrator.git
-cd node-orchestrator
-
-# Copier et configurer les variables d'environnement
-cp .env.example .env
-# Éditer .env avec vos clés
-
-# Lancer avec Docker Compose
-docker-compose up -d
-
-# L'application est disponible sur http://localhost:3000
-```
-
-### Option 2: Installation Manuelle
-
-```bash
-# Cloner le repo
-git clone https://github.com/your-username/node-orchestrator.git
-cd node-orchestrator
-
-# Installer les dépendances backend
-npm install
-
-# Installer les dépendances frontend
-cd frontend && npm install && cd ..
-
-# Copier et configurer les variables d'environnement
-cp .env.example .env
-
-# Mode développement (avec hot reload)
-npm run dev
-
-# Dans un autre terminal, lancer le frontend
-cd frontend && npm run dev
-```
-
-### Option 3: Développement avec Docker
-
-```bash
-# Lancer l'environnement de développement complet
-docker-compose -f docker-compose.dev.yml up
-
-# Backend: http://localhost:3000
-# Frontend: http://localhost:5173
-```
-
----
-
-## ⚙️ Configuration
-
-### Variables d'Environnement (.env)
-
-```env
-# Application
-NODE_ENV=development
-PORT=3000
-
-# Sécurité
-ENCRYPTION_KEY=your-32-char-encryption-key-here
-JWT_SECRET=your-jwt-secret-key
-
-# Adresses de paiement
-PAYMENT_ADDRESS_BTC=bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh
-PAYMENT_ADDRESS_ETH=0x742d35Cc6634C0532925a3b844Bc9e7595f1234
-PAYMENT_ADDRESS_USDC=0x742d35Cc6634C0532925a3b844Bc9e7595f1234
-
-# APIs externes (optionnel)
-ETHERSCAN_API_KEY=your-etherscan-api-key
-```
 
 ---
 
@@ -134,195 +130,158 @@ ETHERSCAN_API_KEY=your-etherscan-api-key
 
 ### 1. Créer un Node
 
-1. Cliquez sur **"Nouveau Node"** dans le dashboard
-2. Sélectionnez la blockchain (BTC, ETH, SOL, XMR, BNB)
-3. Choisissez le mode (Full, Pruned, Light) - auto-recommandé selon vos ressources
-4. Donnez un nom à votre node
+1. Ouvrez l'application
+2. Cliquez sur **"Nouveau Node"**
+3. Sélectionnez la blockchain parmi 205 options
+4. Choisissez le mode (Full, Pruned, Light)
 5. Cliquez sur **"Créer"**
 
-Le node sera automatiquement déployé dans un container Docker isolé.
-
-### 2. Gérer les Nodes
-
-- **▶️ Démarrer** - Lance le container du node
-- **⏸️ Arrêter** - Stop le container proprement
-- **🔄 Redémarrer** - Restart complet du node
-- **📊 Voir les logs** - Logs en temps réel
-- **🗑️ Supprimer** - Supprime le node et ses données
-
-### 3. Créer un Wallet
+### 2. Créer un Wallet
 
 1. Allez dans **Wallets** > **"Nouveau Wallet"**
-2. Sélectionnez la blockchain
-3. Donnez un nom au wallet
-4. Votre wallet HD est généré avec une seed phrase BIP39
+2. Recherchez votre blockchain (ex: "Bitcoin", "Ethereum")
+3. **Entrez un mot de passe** (min 8 caractères) pour chiffrer votre seed
+4. Pour Bitcoin, choisissez le type d'adresse:
+   - **Legacy** (1xxx...) - Compatible partout
+   - **SegWit** (3xxx...) - Frais réduits
+   - **Native SegWit** (bc1q...) - Frais très bas ✨
+   - **Taproot** (bc1p...) - Le plus récent
+5. **Sauvegardez votre seed phrase** (12 mots) en lieu sûr !
 
-⚠️ **Important**: Sauvegardez votre seed phrase dans un endroit sûr !
+⚠️ **IMPORTANT**: Le mot de passe chiffre votre seed localement. Si vous l'oubliez, vous ne pourrez plus accéder à votre seed !
 
-### 4. Monitoring
+### 3. Voir sa Seed Phrase
 
-Le dashboard affiche en temps réel:
-- Statut de tous les nodes (running, stopped, syncing...)
-- Utilisation CPU/RAM/Disque
-- Logs en streaming
-- Progression de synchronisation
+1. Cliquez sur **"Voir Seed"** sur votre wallet
+2. Entrez votre mot de passe
+3. Votre seed phrase s'affiche
+4. Copiez-la et gardez-la en sécurité
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-node-orchestrator/
-├── src/                    # Backend (Node.js + Express)
-│   ├── api/               # Routes REST API
-│   ├── core/              # Managers (Node, Wallet, Payment)
-│   ├── utils/             # Utilitaires (logger, crypto, system)
-│   ├── websocket/         # Handler WebSocket
-│   ├── config/            # Configuration centralisée
-│   └── server.ts          # Point d'entrée
-├── frontend/              # Frontend (React + Vite)
+universal-orchestrator-node/
+├── electron/               # Application Electron
+│   ├── main.js            # Process principal
+│   └── start-server.js    # Serveur Express embarqué
+├── frontend/               # Interface React
 │   ├── src/
-│   │   ├── components/   # Composants React
-│   │   ├── pages/        # Pages (Dashboard, Nodes, Wallets, Settings)
-│   │   ├── services/     # API et WebSocket clients
-│   │   └── store/        # État global (Zustand)
-├── data/                  # Données persistantes
-│   ├── nodes/            # Données des nodes
-│   ├── wallets/          # Wallets chiffrés
-│   └── logs/             # Logs applicatifs
-└── docker-compose.yml    # Orchestration Docker
+│   │   ├── components/    # Composants UI
+│   │   ├── pages/         # Pages (Dashboard, Nodes, Wallets, Settings)
+│   │   ├── services/      # API clients
+│   │   ├── config/        # 205 blockchains config
+│   │   └── store/         # État Zustand
+├── src/                    # Backend TypeScript (dev)
+│   ├── api/               # Routes REST
+│   ├── core/              # Managers
+│   └── config/            # Configuration
+├── tests/                  # Tests unitaires
+└── scripts/               # Scripts utilitaires
 ```
 
 ### Stack Technique
 
 | Composant | Technologie |
 |-----------|-------------|
-| Backend | Node.js, Express, TypeScript |
+| Desktop | Electron 39 |
+| Backend | Node.js, Express |
 | Frontend | React 18, Vite, Tailwind CSS |
 | État | Zustand |
-| Temps réel | Socket.io |
-| Containers | Docker |
-| Crypto | ethers.js, bip39 |
-| Logging | Winston |
-
----
-
-## 💳 Plans & Tarifs
-
-| Plan | Prix | Nodes | Fonctionnalités |
-|------|------|-------|-----------------|
-| **Free** | $0 | 2 nodes | Fonctionnalités de base |
-| **Starter** | $19/mois | 5 nodes | + Support prioritaire |
-| **Premium** | $49/mois | 15 nodes | + Multi-wallets, Analytics |
-| **Enterprise** | Custom | Illimité | + SLA, Support dédié |
-
-Paiements acceptés: **BTC, ETH, USDC**
-
----
-
-## 🔌 API
-
-### Endpoints Principaux
-
-```
-# Nodes
-GET    /api/nodes              # Liste des nodes
-POST   /api/nodes              # Créer un node
-GET    /api/nodes/:id          # Détails d'un node
-DELETE /api/nodes/:id          # Supprimer un node
-POST   /api/nodes/:id/start    # Démarrer
-POST   /api/nodes/:id/stop     # Arrêter
-GET    /api/nodes/:id/logs     # Logs
-
-# Wallets
-GET    /api/wallets            # Liste des wallets
-POST   /api/wallets            # Créer un wallet
-GET    /api/wallets/:id        # Détails + seed
-DELETE /api/wallets/:id        # Supprimer
-
-# Système
-GET    /api/system/resources   # CPU, RAM, Disk
-GET    /api/system/health      # Health check
-
-# Paiements
-GET    /api/payments/plans     # Plans disponibles
-POST   /api/payments/create    # Créer un paiement
-GET    /api/payments/:id/verify # Vérifier paiement
-```
-
-### WebSocket Events
-
-```javascript
-// Connexion
-const socket = io('http://localhost:3000');
-
-// Events émis par le serveur
-socket.on('node:created', (node) => {});
-socket.on('node:statusChanged', ({ nodeId, status }) => {});
-socket.on('node:metrics', ({ nodeId, metrics }) => {});
-socket.on('resources:update', (resources) => {});
-```
-
----
-
-## 🧩 Ajouter une Blockchain (Plugin)
-
-1. Ajouter le type dans `src/types/index.ts`:
-```typescript
-export type BlockchainType = 'bitcoin' | 'ethereum' | ... | 'new-chain';
-```
-
-2. Ajouter la configuration dans `src/config/index.ts`:
-```typescript
-blockchains: {
-  'new-chain': {
-    name: 'New Chain',
-    symbol: 'NEW',
-    dockerImage: 'newchain/node:latest',
-    defaultPorts: { rpc: 8545, p2p: 30303 },
-    modes: ['full', 'light'],
-    minResources: { cpu: 2, ram: 4, storage: 100 },
-  },
-}
-```
-
-3. Mettre à jour le frontend pour afficher la nouvelle blockchain.
+| Crypto | bip39, AES-256-GCM, PBKDF2 |
+| Build | electron-builder |
 
 ---
 
 ## 🔐 Sécurité
 
-- 🔒 Wallets chiffrés en AES-256
-- 🛡️ Rate limiting sur les API
-- 🔑 Isolation Docker pour chaque node
-- 📝 Logs d'audit
-- ✅ Helmet.js pour les headers HTTP
+### Chiffrement des Seeds
+- **Algorithme**: AES-256-GCM (Galois/Counter Mode)
+- **Dérivation de clé**: PBKDF2 avec 100,000 itérations + SHA-512
+- **Salt**: 32 bytes aléatoires par wallet
+- **IV**: 16 bytes aléatoires par chiffrement
+
+### Protection API
+- Rate limiting (100 req/min sur endpoints sensibles)
+- Input sanitization (XSS/injection protection)
+- Security headers (X-Frame-Options, X-XSS-Protection, etc.)
+- Validation des mots de passe (8-256 caractères)
+
+### Stockage Local
+- Seeds chiffrées jamais stockées en clair
+- Données dans `%APPDATA%/node-orchestrator/data/`
+- Aucune donnée envoyée à des serveurs externes
 
 ---
 
-## 📝 Roadmap
+## 🔌 API REST
 
-- [x] MVP avec 5 blockchains
-- [x] Dashboard de monitoring
-- [x] Génération de wallets HD
-- [x] Paiements crypto
-- [ ] Notifications (email, Telegram, Discord)
-- [ ] Backup automatique des wallets
-- [ ] Support Kubernetes
-- [ ] Mobile app (React Native)
-- [ ] Plus de blockchains (Polkadot, Cosmos, Avalanche...)
+```http
+# Nodes
+GET    /api/nodes              # Liste des nodes
+POST   /api/nodes              # Créer un node
+GET    /api/nodes/:id          # Détails d'un node
+POST   /api/nodes/:id/start    # Démarrer
+POST   /api/nodes/:id/stop     # Arrêter
+DELETE /api/nodes/:id          # Supprimer
+
+# Wallets
+GET    /api/wallets            # Liste des wallets
+POST   /api/wallets            # Créer un wallet (+ password)
+POST   /api/wallets/:id/seed   # Obtenir la seed (+ password)
+DELETE /api/wallets/:id        # Supprimer
+
+# Système
+GET    /api/system/resources   # CPU, RAM, Disk
+GET    /api/system/health      # Health check
+GET    /api/blockchains        # Liste 205 blockchains
+```
+
+---
+
+## 📝 Roadmap v2.0
+
+Voir [ROADMAP_v2.0.md](ROADMAP_v2.0.md) pour le plan détaillé.
+
+### Prochaines fonctionnalités prévues:
+- 🤖 Assistant IA intégré
+- 📊 Visualisation graphique des transactions
+- 💸 Envoi/réception de crypto
+- 🔄 Swap & Bridge intégrés
+- 📱 Applications mobiles
+- 🔐 Support hardware wallets (Ledger, Trezor)
+
+---
+
+## 💝 Soutenir le Projet
+
+Ce projet est **100% gratuit** et le restera toujours. Si vous souhaitez soutenir son développement, vous pouvez faire un don en crypto via l'onglet **Paramètres** dans l'application.
+
+Les dons servent à:
+- ☕ Café pour les développeurs
+- 🔧 Améliorer le logiciel
+- 📚 Créer de la documentation
 
 ---
 
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! 
+Les contributions sont les bienvenues !
 
-1. Fork le projet
-2. Créez votre branche (`git checkout -b feature/amazing-feature`)
-3. Commit vos changements (`git commit -m 'Add amazing feature'`)
-4. Push sur la branche (`git push origin feature/amazing-feature`)
-5. Ouvrez une Pull Request
+```bash
+# Fork le projet
+# Créez votre branche
+git checkout -b feature/amazing-feature
+
+# Commit vos changements
+git commit -m 'Add amazing feature'
+
+# Push
+git push origin feature/amazing-feature
+
+# Ouvrez une Pull Request
+```
 
 ---
 
@@ -330,18 +289,27 @@ Les contributions sont les bienvenues !
 
 Ce projet est sous licence **MIT** - voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
-Version Premium disponible avec fonctionnalités étendues.
+**100% gratuit, pour toujours.** 🎉
 
 ---
 
-## 📞 Support
+## 📞 Support & Communauté
 
-- 📧 Email: support@node-orchestrator.io
-- 💬 Discord: [Rejoindre le serveur](https://discord.gg/AH93eHVQGU)
-- 📖 Documentation: [docs.node-orchestrator.io](https://docs.node-orchestrator.io)
+<div align="center">
+
+[![Discord](https://img.shields.io/badge/Discord-Rejoindre-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/AH93eHVQGU)
+[![GitHub Issues](https://img.shields.io/badge/GitHub-Issues-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/greenbynox/universal-orchestrator-node/issues)
+
+</div>
 
 ---
 
-<p align="center">
-  Made with ❤️ for the blockchain community
-</p>
+<div align="center">
+
+**Made with ❤️ for the blockchain community**
+
+🌐 Décentralisation pour tous 🌐
+
+<sub>v1.0.0 - Décembre 2025</sub>
+
+</div>

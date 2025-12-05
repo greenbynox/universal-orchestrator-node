@@ -1,41 +1,132 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   PlusIcon, 
   WalletIcon,
   ClipboardDocumentIcon,
   EyeIcon,
-  EyeSlashIcon,
   TrashIcon,
+  MagnifyingGlassIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ShieldCheckIcon,
+  LockClosedIcon,
+  KeyIcon,
 } from '@heroicons/react/24/outline';
 import { useStore } from '../store';
 import { walletsApi } from '../services/api';
-import { BlockchainType, BLOCKCHAIN_COLORS, BLOCKCHAIN_ICONS, BLOCKCHAIN_NAMES } from '../types';
+import { 
+  COMPLETE_BLOCKCHAIN_LIST, 
+  BLOCKCHAIN_CATEGORIES,
+  BlockchainInfo,
+  searchBlockchains,
+  getBlockchainById,
+} from '../config/blockchains';
 import toast from 'react-hot-toast';
 
-const blockchains: BlockchainType[] = ['bitcoin', 'ethereum', 'solana', 'monero', 'bnb'];
+// Type d'adresse Bitcoin
+interface BitcoinAddressType {
+  type: string;
+  prefix: string;
+  bip: string;
+  fees: string;
+}
 
 export default function WalletsPage() {
   const { wallets, addWallet, removeWallet } = useStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedBlockchain, setSelectedBlockchain] = useState<BlockchainType>('bitcoin');
+  const [selectedBlockchain, setSelectedBlockchain] = useState<BlockchainInfo | null>(null);
+  const [selectedAddressType, setSelectedAddressType] = useState<BitcoinAddressType | null>(null);
   const [walletName, setWalletName] = useState('');
+  const [walletPassword, setWalletPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [showSeed, setShowSeed] = useState<string | null>(null);
-  const [seedPassword, setSeedPassword] = useState('');
-  const [revealedSeed, setRevealedSeed] = useState<string | null>(null);
+  const [showSeedModal, setShowSeedModal] = useState<{id: string; seed: string} | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState<string | null>(null);
+  const [decryptPassword, setDecryptPassword] = useState('');
+  const [isDecrypting, setIsDecrypting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(['major']);
+
+  // Filter blockchains based on search
+  const filteredBlockchains = useMemo(() => {
+    if (searchTerm.length > 0) {
+      return searchBlockchains(searchTerm);
+    }
+    return COMPLETE_BLOCKCHAIN_LIST;
+  }, [searchTerm]);
+
+  // Group by category
+  const groupedBlockchains = useMemo(() => {
+    const groups: Record<string, BlockchainInfo[]> = {};
+    filteredBlockchains.forEach(bc => {
+      if (!groups[bc.category]) {
+        groups[bc.category] = [];
+      }
+      groups[bc.category].push(bc);
+    });
+    return groups;
+  }, [filteredBlockchains]);
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(c => c !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const handleSelectBlockchain = (bc: BlockchainInfo) => {
+    setSelectedBlockchain(bc);
+    // Pour Bitcoin, présélectionner Native SegWit
+    if (bc.id === 'bitcoin' && bc.addressTypes) {
+      setSelectedAddressType(bc.addressTypes[2]); // Native SegWit par défaut
+    } else {
+      setSelectedAddressType(null);
+    }
+  };
 
   const handleCreate = async () => {
+    if (!selectedBlockchain) {
+      toast.error('Veuillez sélectionner une blockchain');
+      return;
+    }
+
+    if (walletPassword.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    if (walletPassword !== confirmPassword) {
+      toast.error('Les mots de passe ne correspondent pas');
+      return;
+    }
+
     setIsCreating(true);
     try {
       const wallet = await walletsApi.create({
-        name: walletName || undefined,
-        blockchain: selectedBlockchain,
+        name: walletName || `${selectedBlockchain.name} Wallet`,
+        blockchain: selectedBlockchain.id,
+        addressType: selectedAddressType?.bip,
+        password: walletPassword,
       });
+      
       addWallet(wallet);
-      toast.success('Wallet créé avec succès!');
+      
+      // Afficher directement la seed phrase si elle existe
+      if (wallet.mnemonic) {
+        setShowSeedModal({ id: wallet.id, seed: wallet.mnemonic });
+        toast.success('Wallet créé! Sauvegardez votre seed phrase!');
+      } else {
+        toast.success('Wallet créé avec succès!');
+      }
+      
       setShowCreateModal(false);
       setWalletName('');
+      setWalletPassword('');
+      setConfirmPassword('');
+      setSelectedBlockchain(null);
+      setSelectedAddressType(null);
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -44,7 +135,7 @@ export default function WalletsPage() {
   };
 
   const handleDelete = async (walletId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce wallet ?')) return;
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce wallet ? Cette action est irréversible.')) return;
     
     try {
       await walletsApi.delete(walletId);
@@ -55,12 +146,33 @@ export default function WalletsPage() {
     }
   };
 
-  const handleRevealSeed = async (walletId: string) => {
+  const handleRequestSeed = (walletId: string) => {
+    setShowPasswordModal(walletId);
+    setDecryptPassword('');
+  };
+
+  const handleDecryptSeed = async () => {
+    if (!showPasswordModal) return;
+    
+    if (!decryptPassword) {
+      toast.error('Veuillez entrer votre mot de passe');
+      return;
+    }
+
+    setIsDecrypting(true);
     try {
-      const seed = await walletsApi.exportSeed(walletId, seedPassword);
-      setRevealedSeed(seed);
+      const seed = await walletsApi.getSeed(showPasswordModal, decryptPassword);
+      if (seed) {
+        setShowPasswordModal(null);
+        setDecryptPassword('');
+        setShowSeedModal({ id: showPasswordModal, seed });
+      } else {
+        toast.error('Seed phrase non disponible');
+      }
     } catch (error) {
       toast.error((error as Error).message);
+    } finally {
+      setIsDecrypting(false);
     }
   };
 
@@ -69,13 +181,27 @@ export default function WalletsPage() {
     toast.success('Copié dans le presse-papiers');
   };
 
+  // Get blockchain info for a wallet
+  const getWalletBlockchainInfo = (blockchainId: string): BlockchainInfo => {
+    return getBlockchainById(blockchainId) || {
+      id: blockchainId,
+      name: blockchainId,
+      symbol: blockchainId.toUpperCase(),
+      icon: '🔗',
+      color: '#888888',
+      category: 'other'
+    };
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Wallets</h1>
-          <p className="text-dark-400 mt-1">{wallets.length} wallet(s) HD</p>
+          <p className="text-dark-400 mt-1">
+            {wallets.length} wallet(s) HD • {COMPLETE_BLOCKCHAIN_LIST.length} blockchains supportées
+          </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -84,6 +210,18 @@ export default function WalletsPage() {
           <PlusIcon className="w-5 h-5" />
           Nouveau Wallet
         </button>
+      </div>
+
+      {/* Security Info */}
+      <div className="bg-green-900/20 border border-green-700/50 rounded-xl p-4 flex items-start gap-3">
+        <ShieldCheckIcon className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-green-400 font-medium">Sécurité AES-256-GCM</p>
+          <p className="text-dark-300 text-sm mt-1">
+            Vos seed phrases sont chiffrées localement avec votre mot de passe. 
+            Même si quelqu'un accède à vos fichiers, il ne pourra pas lire vos seeds.
+          </p>
+        </div>
       </div>
 
       {/* Liste des wallets */}
@@ -98,7 +236,7 @@ export default function WalletsPage() {
             Aucun wallet créé
           </h3>
           <p className="text-dark-400 mb-6">
-            Créez votre premier wallet HD pour commencer
+            Créez votre premier wallet HD parmi {COMPLETE_BLOCKCHAIN_LIST.length} blockchains
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -110,251 +248,477 @@ export default function WalletsPage() {
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {wallets.map((wallet, index) => (
-            <motion.div
-              key={wallet.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden"
-            >
-              {/* Header coloré */}
-              <div
-                className="h-2"
-                style={{ backgroundColor: BLOCKCHAIN_COLORS[wallet.blockchain] }}
-              />
+          {wallets.map((wallet, index) => {
+            const bcInfo = getWalletBlockchainInfo(wallet.blockchain);
+            return (
+              <motion.div
+                key={wallet.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden"
+              >
+                {/* Header coloré */}
+                <div
+                  className="h-2"
+                  style={{ backgroundColor: bcInfo.color }}
+                />
 
-              <div className="p-5">
-                {/* Titre */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-                      style={{ backgroundColor: `${BLOCKCHAIN_COLORS[wallet.blockchain]}20` }}
-                    >
-                      {BLOCKCHAIN_ICONS[wallet.blockchain]}
+                <div className="p-5">
+                  {/* Titre */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                        style={{ backgroundColor: `${bcInfo.color}20` }}
+                      >
+                        {bcInfo.icon}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">{wallet.name}</h3>
+                        <p className="text-sm text-dark-400">{bcInfo.name}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-white">{wallet.name}</h3>
-                      <p className="text-sm text-dark-400">{BLOCKCHAIN_NAMES[wallet.blockchain]}</p>
+                    <div className="flex items-center gap-1 px-2 py-1 bg-green-900/30 rounded text-green-400 text-xs">
+                      <LockClosedIcon className="w-3 h-3" />
+                      Chiffré
                     </div>
                   </div>
-                </div>
 
-                {/* Adresse */}
-                <div className="bg-dark-900 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-dark-400 mb-1">Adresse</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-white font-mono truncate flex-1">
-                      {wallet.address}
+                  {/* Adresse */}
+                  <div className="bg-dark-900 rounded-lg p-3 mb-4">
+                    <p className="text-xs text-dark-400 mb-1">Adresse</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-white font-mono truncate flex-1">
+                        {wallet.address}
+                      </p>
+                      <button
+                        onClick={() => copyToClipboard(wallet.address)}
+                        className="p-1.5 rounded-lg hover:bg-dark-800 transition-colors"
+                        title="Copier"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-dark-400" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Balance placeholder */}
+                  <div className="bg-dark-900 rounded-lg p-3 mb-4">
+                    <p className="text-xs text-dark-400 mb-1">Solde</p>
+                    <p className="text-lg font-semibold text-white">
+                      {wallet.balance || '0.00'} {bcInfo.symbol}
                     </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => copyToClipboard(wallet.address)}
-                      className="p-1.5 rounded-lg hover:bg-dark-800 transition-colors"
-                      title="Copier"
+                      onClick={() => handleRequestSeed(wallet.id)}
+                      className="flex-1 btn-secondary text-sm justify-center"
                     >
-                      <ClipboardDocumentIcon className="w-4 h-4 text-dark-400" />
+                      <KeyIcon className="w-4 h-4" />
+                      Voir Seed
+                    </button>
+                    <button
+                      onClick={() => handleDelete(wallet.id)}
+                      className="btn-danger text-sm"
+                      title="Supprimer"
+                    >
+                      <TrashIcon className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-
-                {/* Balance placeholder */}
-                <div className="bg-dark-900 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-dark-400 mb-1">Solde</p>
-                  <p className="text-lg font-semibold text-white">
-                    {wallet.balance || '0.00'} {wallet.blockchain === 'bitcoin' ? 'BTC' : 
-                      wallet.blockchain === 'ethereum' ? 'ETH' : 
-                      wallet.blockchain === 'solana' ? 'SOL' :
-                      wallet.blockchain === 'monero' ? 'XMR' : 'BNB'}
-                  </p>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowSeed(wallet.id)}
-                    className="flex-1 btn-secondary text-sm justify-center"
-                  >
-                    <EyeIcon className="w-4 h-4" />
-                    Voir Seed
-                  </button>
-                  <button
-                    onClick={() => handleDelete(wallet.id)}
-                    className="btn-danger text-sm"
-                    title="Supprimer"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
       {/* Modal création wallet */}
-      {showCreateModal && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-            onClick={() => setShowCreateModal(false)}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <AnimatePresence>
+        {showCreateModal && (
+          <>
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-dark-800 rounded-2xl w-full max-w-md border border-dark-700 p-6"
-            >
-              <h2 className="text-xl font-semibold text-white mb-6">
-                Créer un Wallet HD
-              </h2>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">
-                    Nom (optionnel)
-                  </label>
-                  <input
-                    type="text"
-                    value={walletName}
-                    onChange={(e) => setWalletName(e.target.value)}
-                    placeholder="Mon wallet Bitcoin..."
-                    className="input-base"
-                  />
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => setShowCreateModal(false)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-dark-800 rounded-2xl w-full max-w-2xl border border-dark-700 max-h-[90vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-6 border-b border-dark-700">
+                  <h2 className="text-xl font-semibold text-white">
+                    Créer un Wallet HD
+                  </h2>
+                  <p className="text-sm text-dark-400 mt-1">
+                    Choisissez parmi {COMPLETE_BLOCKCHAIN_LIST.length} blockchains
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-3">
-                    Blockchain
-                  </label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {blockchains.map((bc) => (
-                      <button
-                        key={bc}
-                        type="button"
-                        onClick={() => setSelectedBlockchain(bc)}
-                        className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
-                          selectedBlockchain === bc
-                            ? 'border-primary-500 bg-primary-500/10'
-                            : 'border-dark-600 hover:border-dark-500'
-                        }`}
-                      >
-                        <span
-                          className="text-2xl"
-                          style={{ color: BLOCKCHAIN_COLORS[bc] }}
-                        >
-                          {BLOCKCHAIN_ICONS[bc]}
-                        </span>
-                        <span className="text-xs text-dark-300">
-                          {BLOCKCHAIN_NAMES[bc].slice(0, 3)}
-                        </span>
-                      </button>
-                    ))}
+                <div className="p-6 overflow-y-auto flex-1">
+                  <div className="space-y-4">
+                    {/* Nom */}
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-2">
+                        Nom du wallet (optionnel)
+                      </label>
+                      <input
+                        type="text"
+                        value={walletName}
+                        onChange={(e) => setWalletName(e.target.value)}
+                        placeholder="Mon wallet..."
+                        className="input-base"
+                      />
+                    </div>
+
+                    {/* Mot de passe */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">
+                          <LockClosedIcon className="w-4 h-4 inline mr-1" />
+                          Mot de passe (min 8 car.)
+                        </label>
+                        <input
+                          type="password"
+                          value={walletPassword}
+                          onChange={(e) => setWalletPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="input-base"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">
+                          Confirmer le mot de passe
+                        </label>
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className={`input-base ${confirmPassword && walletPassword !== confirmPassword ? 'border-red-500' : ''}`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-3 text-sm">
+                      <p className="text-yellow-400">
+                        ⚠️ Ce mot de passe chiffre votre seed phrase. Si vous l'oubliez, vous ne pourrez plus accéder à votre seed!
+                      </p>
+                    </div>
+
+                    {/* Recherche */}
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-2">
+                        Blockchain
+                      </label>
+                      <div className="relative">
+                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+                        <input
+                          type="text"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder="Rechercher Bitcoin, Ethereum, Solana..."
+                          className="input-base pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Blockchain sélectionnée */}
+                    {selectedBlockchain && (
+                      <div className="bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">{selectedBlockchain.icon}</span>
+                          <div>
+                            <p className="font-medium text-white">{selectedBlockchain.name}</p>
+                            <p className="text-sm text-dark-400">{selectedBlockchain.symbol}</p>
+                          </div>
+                          <button
+                            onClick={() => setSelectedBlockchain(null)}
+                            className="ml-auto text-dark-400 hover:text-white"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Sélection du type d'adresse Bitcoin */}
+                        {selectedBlockchain.id === 'bitcoin' && selectedBlockchain.addressTypes && (
+                          <div className="mt-4 pt-4 border-t border-primary-500/20">
+                            <p className="text-sm font-medium text-dark-300 mb-3">
+                              Type d'adresse Bitcoin
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {selectedBlockchain.addressTypes.map((addrType) => (
+                                <button
+                                  key={addrType.bip}
+                                  type="button"
+                                  onClick={() => setSelectedAddressType(addrType)}
+                                  className={`p-3 rounded-lg border text-left transition-all ${
+                                    selectedAddressType?.bip === addrType.bip
+                                      ? 'border-primary-500 bg-primary-500/10'
+                                      : 'border-dark-600 hover:border-dark-500'
+                                  }`}
+                                >
+                                  <p className="font-medium text-white text-sm">{addrType.type}</p>
+                                  <p className="text-xs text-dark-400 mt-1">{addrType.prefix}</p>
+                                  <div className="flex items-center justify-between mt-2">
+                                    <span className="text-xs text-primary-400">{addrType.bip}</span>
+                                    <span className={`text-xs ${
+                                      addrType.fees === 'Très bas' ? 'text-green-400' :
+                                      addrType.fees === 'Bas' ? 'text-green-500' :
+                                      addrType.fees === 'Moyens' ? 'text-yellow-400' :
+                                      'text-orange-400'
+                                    }`}>
+                                      Frais: {addrType.fees}
+                                    </span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Liste par catégories */}
+                    {!selectedBlockchain && (
+                      <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
+                        {BLOCKCHAIN_CATEGORIES.map((cat) => {
+                          const chains = groupedBlockchains[cat.id] || [];
+                          if (chains.length === 0) return null;
+                          
+                          const isExpanded = expandedCategories.includes(cat.id);
+                          
+                          return (
+                            <div key={cat.id} className="border border-dark-700 rounded-lg overflow-hidden">
+                              <button
+                                type="button"
+                                onClick={() => toggleCategory(cat.id)}
+                                className="w-full flex items-center justify-between p-3 hover:bg-dark-700/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {isExpanded ? (
+                                    <ChevronDownIcon className="w-4 h-4 text-dark-400" />
+                                  ) : (
+                                    <ChevronRightIcon className="w-4 h-4 text-dark-400" />
+                                  )}
+                                  <span className="font-medium text-white">{cat.name}</span>
+                                  <span className="text-xs text-dark-400">({chains.length})</span>
+                                </div>
+                              </button>
+                              
+                              {isExpanded && (
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 p-3 pt-0">
+                                  {chains.map((bc) => (
+                                    <button
+                                      key={bc.id}
+                                      type="button"
+                                      onClick={() => handleSelectBlockchain(bc)}
+                                      className="p-2 rounded-lg border border-dark-600 hover:border-primary-500 hover:bg-dark-700/50 transition-all flex flex-col items-center gap-1"
+                                      title={`${bc.name} (${bc.symbol})`}
+                                    >
+                                      <span
+                                        className="text-xl"
+                                        style={{ color: bc.color }}
+                                      >
+                                        {bc.icon}
+                                      </span>
+                                      <span className="text-xs text-dark-300 truncate w-full text-center">
+                                        {bc.symbol}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 btn-secondary justify-center"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleCreate}
-                  disabled={isCreating}
-                  className="flex-1 btn-primary justify-center"
-                >
-                  {isCreating ? 'Création...' : 'Créer le Wallet'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        </>
-      )}
+                <div className="p-6 border-t border-dark-700 flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setSelectedBlockchain(null);
+                      setSelectedAddressType(null);
+                      setWalletName('');
+                      setWalletPassword('');
+                      setConfirmPassword('');
+                      setSearchTerm('');
+                    }}
+                    className="flex-1 btn-secondary justify-center"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleCreate}
+                    disabled={isCreating || !selectedBlockchain || walletPassword.length < 8 || walletPassword !== confirmPassword}
+                    className="flex-1 btn-primary justify-center disabled:opacity-50"
+                  >
+                    {isCreating ? 'Création...' : 'Créer le Wallet'}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
 
-      {/* Modal affichage seed */}
-      {showSeed && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-            onClick={() => {
-              setShowSeed(null);
-              setRevealedSeed(null);
-              setSeedPassword('');
-            }}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Modal demande de mot de passe pour décrypter */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <>
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-dark-800 rounded-2xl w-full max-w-md border border-dark-700 p-6"
-            >
-              <h2 className="text-xl font-semibold text-white mb-4">
-                Seed Phrase
-              </h2>
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => {
+                setShowPasswordModal(null);
+                setDecryptPassword('');
+              }}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-dark-800 rounded-2xl w-full max-w-md border border-dark-700 p-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center">
+                    <KeyIcon className="w-5 h-5 text-primary-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">
+                      Déchiffrer la Seed
+                    </h2>
+                    <p className="text-sm text-dark-400">Entrez votre mot de passe</p>
+                  </div>
+                </div>
 
-              <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
-                <p className="text-sm text-red-400">
-                  ⚠️ Ne partagez JAMAIS votre seed phrase. Quiconque la possède peut accéder à vos fonds.
-                </p>
-              </div>
-
-              {!revealedSeed ? (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-dark-300 mb-2">
-                      Mot de passe pour révéler
+                      Mot de passe du wallet
                     </label>
                     <input
                       type="password"
-                      value={seedPassword}
-                      onChange={(e) => setSeedPassword(e.target.value)}
-                      placeholder="Entrez votre mot de passe..."
+                      value={decryptPassword}
+                      onChange={(e) => setDecryptPassword(e.target.value)}
+                      placeholder="••••••••"
                       className="input-base"
+                      onKeyDown={(e) => e.key === 'Enter' && handleDecryptSeed()}
+                      autoFocus
                     />
                   </div>
+
                   <button
-                    onClick={() => handleRevealSeed(showSeed)}
-                    disabled={seedPassword.length < 8}
-                    className="w-full btn-danger justify-center"
+                    onClick={handleDecryptSeed}
+                    disabled={isDecrypting || !decryptPassword}
+                    className="w-full btn-primary justify-center disabled:opacity-50"
                   >
-                    <EyeSlashIcon className="w-5 h-5" />
-                    Révéler la Seed
+                    {isDecrypting ? 'Déchiffrement...' : 'Déchiffrer'}
                   </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-dark-900 rounded-lg p-4">
-                    <p className="text-white font-mono text-sm leading-relaxed break-words">
-                      {revealedSeed}
-                    </p>
-                  </div>
+
                   <button
-                    onClick={() => copyToClipboard(revealedSeed)}
+                    onClick={() => {
+                      setShowPasswordModal(null);
+                      setDecryptPassword('');
+                    }}
                     className="w-full btn-secondary justify-center"
                   >
-                    <ClipboardDocumentIcon className="w-5 h-5" />
-                    Copier la Seed
+                    Annuler
                   </button>
                 </div>
-              )}
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
 
-              <button
-                onClick={() => {
-                  setShowSeed(null);
-                  setRevealedSeed(null);
-                  setSeedPassword('');
-                }}
-                className="w-full btn-secondary justify-center mt-4"
+      {/* Modal affichage seed - après déchiffrement */}
+      <AnimatePresence>
+        {showSeedModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => setShowSeedModal(null)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-dark-800 rounded-2xl w-full max-w-md border border-dark-700 p-6"
+                onClick={(e) => e.stopPropagation()}
               >
-                Fermer
-              </button>
-            </motion.div>
-          </div>
-        </>
-      )}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <ShieldCheckIcon className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">
+                      Seed Phrase
+                    </h2>
+                    <p className="text-sm text-dark-400">12 mots de récupération</p>
+                  </div>
+                </div>
+
+                <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-red-400">
+                    ⚠️ <strong>ATTENTION :</strong> Ne partagez JAMAIS votre seed phrase. 
+                    Quiconque la possède peut accéder à vos fonds. 
+                    Notez-la sur papier et gardez-la en lieu sûr.
+                  </p>
+                </div>
+
+                <div className="bg-dark-900 rounded-lg p-4 mb-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    {showSeedModal.seed.split(' ').map((word, index) => (
+                      <div 
+                        key={index}
+                        className="bg-dark-800 rounded px-2 py-1.5 text-sm"
+                      >
+                        <span className="text-dark-500 mr-1">{index + 1}.</span>
+                        <span className="text-white font-mono">{word}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => copyToClipboard(showSeedModal.seed)}
+                  className="w-full btn-secondary justify-center mb-3"
+                >
+                  <ClipboardDocumentIcon className="w-5 h-5" />
+                  Copier la Seed Phrase
+                </button>
+
+                <button
+                  onClick={() => setShowSeedModal(null)}
+                  className="w-full btn-primary justify-center"
+                >
+                  J'ai sauvegardé ma seed
+                </button>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

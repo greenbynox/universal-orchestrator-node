@@ -28,7 +28,7 @@ export default function Layout({ children }: LayoutProps) {
   const { isConnected, sidebarOpen, setSidebarOpen, nodes } = useStore();
 
   const runningNodes = nodes.filter(
-    (n) => n.state.status === 'ready' || n.state.status === 'syncing'
+    (n) => n.state?.status === 'ready' || n.state?.status === 'syncing'
   ).length;
 
   return (

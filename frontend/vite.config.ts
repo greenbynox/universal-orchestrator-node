@@ -4,6 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  base: './',  // Important for Electron - use relative paths
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

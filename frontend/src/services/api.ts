@@ -117,12 +117,14 @@ export const walletsApi = {
     return data.data;
   },
 
-  // Créer un nouveau wallet
+  // Créer un nouveau wallet (avec chiffrement AES-256-GCM)
   create: async (params: {
     name?: string;
-    blockchain: BlockchainType;
+    blockchain: string;
     importSeed?: string;
-  }): Promise<WalletInfo> => {
+    addressType?: string;
+    password: string; // Required for encryption
+  }): Promise<WalletInfo & { mnemonic?: string }> => {
     const { data } = await api.post('/wallets', params);
     return data.data;
   },
@@ -139,10 +141,16 @@ export const walletsApi = {
     return data.data.balance;
   },
 
-  // Exporter la seed (ATTENTION: sensible!)
-  exportSeed: async (id: string, password: string): Promise<string> => {
-    const { data } = await api.post(`/wallets/${id}/export-seed`, { password });
-    return data.data.seed;
+  // Obtenir la seed phrase (nécessite mot de passe pour déchiffrer)
+  getSeed: async (id: string, password: string): Promise<string | null> => {
+    const { data } = await api.post(`/wallets/${id}/seed`, { password });
+    return data.data?.seed || null;
+  },
+
+  // Vérifier le mot de passe du wallet
+  verifyPassword: async (id: string, password: string): Promise<boolean> => {
+    const { data } = await api.post(`/wallets/${id}/verify-password`, { password });
+    return data.data?.valid || false;
   },
 
   // Renommer un wallet
@@ -208,7 +216,18 @@ export const systemApi = {
   // Obtenir les ressources système
   getResources: async (): Promise<SystemResources> => {
     const { data } = await api.get('/system/resources');
-    return data.data;
+    const raw = data.data;
+    // Transform API format to frontend format
+    return {
+      cpuCores: raw.cpu?.cores || 0,
+      cpuModel: raw.cpu?.model || 'Unknown',
+      totalMemoryGB: raw.memory?.totalGB || 0,
+      availableMemoryGB: raw.memory?.freeGB || 0,
+      totalDiskGB: raw.disk?.totalGB || 0,
+      availableDiskGB: raw.disk?.freeGB || 0,
+      platform: raw.platform || 'windows',
+      arch: raw.arch || 'x64',
+    };
   },
 
   // Obtenir les métriques en temps réel
@@ -223,8 +242,8 @@ export const systemApi = {
 
   // Obtenir les blockchains supportées
   getBlockchains: async (): Promise<any[]> => {
-    const { data } = await api.get('/system/blockchains');
-    return data.data;
+    const { data } = await api.get('/blockchains');
+    return data.data || [];
   },
 
   // Health check

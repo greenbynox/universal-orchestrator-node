@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { NodeInfo, BLOCKCHAIN_COLORS, BLOCKCHAIN_ICONS, BLOCKCHAIN_NAMES } from '../types';
 import { nodesApi } from '../services/api';
+import { useStore } from '../store';
 import toast from 'react-hot-toast';
 import { useState } from 'react';
 
@@ -20,7 +21,25 @@ interface NodeCardProps {
 
 export default function NodeCard({ node, onSelect }: NodeCardProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { config, state, metrics } = node;
+  const { removeNode, updateNodeStatus } = useStore();
+  const { config } = node;
+  // Provide default state if undefined
+  const state = node.state || {
+    status: 'stopped' as const,
+    syncProgress: 0,
+    blockHeight: 0,
+    latestBlock: 0,
+    peers: 0,
+    lastError: null,
+  };
+  // Provide default metrics if undefined
+  const metrics = node.metrics || {
+    cpuUsage: 0,
+    memoryUsage: 0,
+    diskUsage: 0,
+    networkIn: 0,
+    networkOut: 0,
+  };
   const color = BLOCKCHAIN_COLORS[config.blockchain];
   const icon = BLOCKCHAIN_ICONS[config.blockchain];
   const name = BLOCKCHAIN_NAMES[config.blockchain];
@@ -30,6 +49,7 @@ export default function NodeCard({ node, onSelect }: NodeCardProps) {
     setIsLoading(true);
     try {
       await nodesApi.start(config.id);
+      updateNodeStatus(config.id, 'ready');
       toast.success('Node démarré');
     } catch (error) {
       toast.error((error as Error).message);
@@ -43,6 +63,7 @@ export default function NodeCard({ node, onSelect }: NodeCardProps) {
     setIsLoading(true);
     try {
       await nodesApi.stop(config.id);
+      updateNodeStatus(config.id, 'stopped');
       toast.success('Node arrêté');
     } catch (error) {
       toast.error((error as Error).message);
@@ -58,6 +79,7 @@ export default function NodeCard({ node, onSelect }: NodeCardProps) {
     setIsLoading(true);
     try {
       await nodesApi.delete(config.id);
+      removeNode(config.id);  // Update store immediately
       toast.success('Node supprimé');
     } catch (error) {
       toast.error((error as Error).message);
@@ -157,11 +179,11 @@ export default function NodeCard({ node, onSelect }: NodeCardProps) {
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="bg-dark-900 rounded-lg p-3 text-center">
             <p className="text-xs text-dark-400 mb-1">CPU</p>
-            <p className="text-sm font-medium text-white">{metrics.cpuUsage.toFixed(1)}%</p>
+            <p className="text-sm font-medium text-white">{(metrics?.cpuUsage ?? 0).toFixed(1)}%</p>
           </div>
           <div className="bg-dark-900 rounded-lg p-3 text-center">
             <p className="text-xs text-dark-400 mb-1">RAM</p>
-            <p className="text-sm font-medium text-white">{metrics.memoryUsage.toFixed(0)} MB</p>
+            <p className="text-sm font-medium text-white">{(metrics?.memoryUsage ?? 0).toFixed(0)} MB</p>
           </div>
           <div className="bg-dark-900 rounded-lg p-3 text-center">
             <p className="text-xs text-dark-400 mb-1">Peers</p>
