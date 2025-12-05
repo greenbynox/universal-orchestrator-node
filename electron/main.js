@@ -46,7 +46,12 @@ function getDataPath() {
 
 function sendSplashUpdate(data) {
   if (splashWindow && !splashWindow.isDestroyed()) {
-    splashWindow.webContents.send('splash-update', data);
+    try {
+      splashWindow.webContents.send('splash-update', data);
+      console.log('[Splash] Sent update:', data.log?.id || 'status', data.progress + '%');
+    } catch (err) {
+      console.error('[Splash] Failed to send update:', err);
+    }
   }
 }
 
@@ -61,7 +66,7 @@ function updateSplashProgress(id, text, status, progress) {
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 420,
-    height: 380,
+    height: 450,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -78,6 +83,7 @@ function createSplashWindow() {
   
   // Send initial update when ready
   splashWindow.webContents.on('did-finish-load', () => {
+    console.log('[Splash] Window loaded, sending initial update...');
     updateSplashProgress('init', 'Démarrage de l\'application...', 'pending', 5);
   });
 }
@@ -284,7 +290,7 @@ function startBackend() {
         return;
       }
       
-      updateSplashProgress('server-start', 'Démarrage du serveur sur le port 3001...', 'pending', 55);
+      updateSplashProgress('server-start', 'Connexion au serveur...', 'pending', 55);
       
       // Wait for server to be ready with increased timeout
       let attempts = 0;
@@ -293,10 +299,13 @@ function startBackend() {
       const checkServer = () => {
         attempts++;
         
-        // Update progress based on attempts
+        // Update progress more frequently for better feedback
         const progressInCheck = 55 + Math.min(30, attempts * 0.5);
-        if (attempts % 20 === 0) {
-          updateSplashProgress('server-start', `Démarrage du serveur... (${Math.round(attempts/2)}s)`, 'pending', progressInCheck);
+        const elapsedSec = Math.round(attempts / 2);
+        
+        // Update every 2 seconds (every 4 attempts)
+        if (attempts % 4 === 0) {
+          updateSplashProgress('server-start', `Connexion au serveur... (${elapsedSec}s)`, 'pending', progressInCheck);
         }
         
         if (attempts > maxAttempts) {
