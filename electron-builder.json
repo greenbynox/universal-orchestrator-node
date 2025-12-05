@@ -95,12 +95,27 @@
     "target": [
       {
         "target": "AppImage",
-        "arch": ["x64"]
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "tar.gz",
+        "arch": ["x64", "arm64"]
       }
     ],
     "icon": "electron/icons",
     "category": "Development",
-    "artifactName": "${productName}-${version}-Linux.${ext}"
+    "artifactName": "${productName}-${version}-Linux-${arch}.${ext}",
+    "synopsis": "Multi-blockchain node orchestrator",
+    "description": "Deploy and manage 205+ blockchain nodes with a beautiful UI. 100% free and open source.",
+    "maintainer": "Node Orchestrator Team"
+  },
+  "deb": {
+    "depends": ["libgtk-3-0", "libnotify4", "libnss3", "libxss1", "libxtst6", "xdg-utils", "libatspi2.0-0", "libuuid1"],
+    "category": "Development"
   },
   "publish": null
 }
