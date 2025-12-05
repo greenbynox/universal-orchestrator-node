@@ -41,25 +41,45 @@ function getDataPath() {
 }
 
 // ============================================================
-// SPLASH SCREEN
+// SPLASH SCREEN WITH PROGRESS
 // ============================================================
+
+function sendSplashUpdate(data) {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send('splash-update', data);
+  }
+}
+
+function updateSplashProgress(id, text, status, progress) {
+  sendSplashUpdate({
+    status: text,
+    progress: progress,
+    log: { id, text, status }
+  });
+}
 
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
-    width: 400,
-    height: 300,
+    width: 420,
+    height: 380,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
+    resizable: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
   splashWindow.center();
+  
+  // Send initial update when ready
+  splashWindow.webContents.on('did-finish-load', () => {
+    updateSplashProgress('init', 'Démarrage de l\'application...', 'pending', 5);
+  });
 }
 
 // ============================================================
@@ -72,7 +92,7 @@ function createMainWindow() {
     height: 900,
     minWidth: 1000,
     minHeight: 700,
-    show: true,  // Show immediately
+    show: false,  // Don't show until splash is done
     center: true, // Center on screen
     icon: path.join(__dirname, 'icons', 'icon.png'),
     webPreferences: {
@@ -85,13 +105,7 @@ function createMainWindow() {
     backgroundColor: '#0a0a0f',
   });
 
-  console.log('Main window created, showing...');
-  
-  // Close splash immediately since we show main window
-  if (splashWindow) {
-    splashWindow.destroy();
-    splashWindow = null;
-  }
+  console.log('Main window created...');
 
   // Load frontend
   if (isDevMode) {
@@ -220,6 +234,10 @@ function createTray() {
 function startBackend() {
   return new Promise((resolve, reject) => {
     try {
+      // Update splash: environment setup
+      updateSplashProgress('init', 'Démarrage de l\'application...', 'success', 5);
+      updateSplashProgress('env', 'Configuration de l\'environnement...', 'pending', 10);
+      
       // Set environment variables BEFORE requiring modules
       process.env.NODE_ENV = 'production';
       process.env.PORT = BACKEND_PORT.toString();
@@ -229,6 +247,10 @@ function startBackend() {
       // Ensure data directory exists
       const dataPath = getDataPath();
       console.log('[Backend] Creating data directory:', dataPath);
+      
+      updateSplashProgress('env', 'Configuration de l\'environnement...', 'success', 15);
+      updateSplashProgress('data', 'Préparation des données locales...', 'pending', 20);
+      
       if (!fs.existsSync(dataPath)) {
         fs.mkdirSync(dataPath, { recursive: true });
       }
@@ -239,20 +261,30 @@ function startBackend() {
       console.log('[Backend] Is packaged:', app.isPackaged);
       console.log('[Backend] Port:', BACKEND_PORT);
 
+      updateSplashProgress('data', 'Préparation des données locales...', 'success', 25);
+      updateSplashProgress('deps', 'Chargement des dépendances...', 'pending', 30);
+
       // Use simplified embedded server
       const serverPath = path.join(__dirname, 'start-server.js');
       console.log('[Backend] Server path:', serverPath);
       console.log('[Backend] Server exists:', fs.existsSync(serverPath));
       
+      updateSplashProgress('deps', 'Chargement des dépendances...', 'success', 35);
+      updateSplashProgress('server-init', 'Initialisation du serveur Express...', 'pending', 40);
+      
       // Import and start the server with error catching
       try {
         require(serverPath);
         console.log('[Backend] Server module loaded successfully');
+        updateSplashProgress('server-init', 'Initialisation du serveur Express...', 'success', 50);
       } catch (loadErr) {
         console.error('[Backend] Failed to load server module:', loadErr);
+        updateSplashProgress('server-init', 'Erreur de chargement du serveur', 'error', 50);
         reject(loadErr);
         return;
       }
+      
+      updateSplashProgress('server-start', 'Démarrage du serveur sur le port 3001...', 'pending', 55);
       
       // Wait for server to be ready with increased timeout
       let attempts = 0;
@@ -260,8 +292,16 @@ function startBackend() {
       
       const checkServer = () => {
         attempts++;
+        
+        // Update progress based on attempts
+        const progressInCheck = 55 + Math.min(30, attempts * 0.5);
+        if (attempts % 20 === 0) {
+          updateSplashProgress('server-start', `Démarrage du serveur... (${Math.round(attempts/2)}s)`, 'pending', progressInCheck);
+        }
+        
         if (attempts > maxAttempts) {
           console.error('[Backend] Timeout waiting for server');
+          updateSplashProgress('server-start', 'Timeout du serveur', 'error', progressInCheck);
           reject(new Error(`Backend startup timeout after ${maxAttempts * 500}ms`));
           return;
         }
@@ -269,6 +309,8 @@ function startBackend() {
         const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/health`, (res) => {
           if (res.statusCode === 200) {
             console.log('[Backend] Server is ready!');
+            updateSplashProgress('server-start', 'Serveur démarré avec succès', 'success', 85);
+            updateSplashProgress('ready', 'Serveur prêt !', 'success', 90);
             resolve();
           } else {
             console.log(`[Backend] Server responded with status ${res.statusCode}`);
@@ -478,14 +520,37 @@ app.whenReady().then(async () => {
     // Start backend server
     await startBackend();
 
+    // Update splash: loading UI
+    updateSplashProgress('ui', 'Chargement de l\'interface...', 'pending', 92);
+
     // Create main window
     createMainWindow();
     createTray();
     createMenu();
+    
+    // Update splash: complete
+    updateSplashProgress('ui', 'Interface prête', 'success', 98);
+    updateSplashProgress('complete', 'Lancement de l\'application...', 'success', 100);
+    
+    // Small delay before closing splash for smooth transition
+    setTimeout(() => {
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close();
+        splashWindow = null;
+      }
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }, 500);
+    
   } catch (error) {
     console.error('Failed to start application:', error);
-    dialog.showErrorBox('Erreur de démarrage', `Impossible de démarrer l'application:\n${error.message}`);
-    app.quit();
+    updateSplashProgress('error', `Erreur: ${error.message}`, 'error', 0);
+    setTimeout(() => {
+      dialog.showErrorBox('Erreur de démarrage', `Impossible de démarrer l'application:\n${error.message}`);
+      app.quit();
+    }, 2000);
   }
 
   app.on('activate', () => {
