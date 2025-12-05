@@ -475,8 +475,8 @@ function createMenu() {
             dialog.showMessageBox({
               type: 'info',
               title: 'Node Orchestrator',
-              message: 'Node Orchestrator v1.0.0',
-              detail: 'Orchestrateur Multi-Blockchain\n173+ blockchains supportées\n\n© 2024 Node Orchestrator Team',
+              message: 'Node Orchestrator v1.0.3',
+              detail: 'Orchestrateur Multi-Blockchain\n205+ blockchains supportées\n\n© 2024 Node Orchestrator Team',
             });
           },
         },

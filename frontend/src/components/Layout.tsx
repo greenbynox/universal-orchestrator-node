@@ -120,7 +120,7 @@ export default function Layout({ children }: LayoutProps) {
 
           <div className="flex items-center gap-4">
             <div className="text-sm text-dark-400">
-              v1.0.0 MVP
+              v1.0.3
             </div>
           </div>
         </header>

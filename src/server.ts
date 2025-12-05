@@ -101,7 +101,7 @@ app.use('/api/payments', requireAuth, paymentsRouter);
 app.get('/api', (_req: Request, res: Response) => {
   res.json({
     name: 'Node Orchestrator API',
-    version: '1.0.0',
+    version: '1.0.3',
     status: 'running',
     authenticated: false,
     endpoints: {
