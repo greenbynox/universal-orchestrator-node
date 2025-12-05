@@ -227,51 +227,74 @@ function startBackend() {
       process.env.RESOURCES_PATH = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..');
 
       // Ensure data directory exists
-      if (!fs.existsSync(getDataPath())) {
-        fs.mkdirSync(getDataPath(), { recursive: true });
+      const dataPath = getDataPath();
+      console.log('[Backend] Creating data directory:', dataPath);
+      if (!fs.existsSync(dataPath)) {
+        fs.mkdirSync(dataPath, { recursive: true });
       }
 
-      console.log('Starting embedded backend server...');
-      console.log('Data path:', getDataPath());
-      console.log('Resources path:', process.env.RESOURCES_PATH);
-      console.log('Is packaged:', app.isPackaged);
+      console.log('[Backend] Starting embedded backend server...');
+      console.log('[Backend] Data path:', dataPath);
+      console.log('[Backend] Resources path:', process.env.RESOURCES_PATH);
+      console.log('[Backend] Is packaged:', app.isPackaged);
+      console.log('[Backend] Port:', BACKEND_PORT);
 
       // Use simplified embedded server
       const serverPath = path.join(__dirname, 'start-server.js');
-      console.log('Server path:', serverPath);
+      console.log('[Backend] Server path:', serverPath);
+      console.log('[Backend] Server exists:', fs.existsSync(serverPath));
       
-      // Import and start the server
-      require(serverPath);
+      // Import and start the server with error catching
+      try {
+        require(serverPath);
+        console.log('[Backend] Server module loaded successfully');
+      } catch (loadErr) {
+        console.error('[Backend] Failed to load server module:', loadErr);
+        reject(loadErr);
+        return;
+      }
       
-      // Wait for server to be ready
+      // Wait for server to be ready with increased timeout
       let attempts = 0;
-      const maxAttempts = 60;
+      const maxAttempts = 120; // 60 seconds max
       
       const checkServer = () => {
         attempts++;
         if (attempts > maxAttempts) {
+          console.error('[Backend] Timeout waiting for server');
           reject(new Error(`Backend startup timeout after ${maxAttempts * 500}ms`));
           return;
         }
         
-        http.get(`http://localhost:${BACKEND_PORT}/api/health`, (res) => {
+        const req = http.get(`http://127.0.0.1:${BACKEND_PORT}/api/health`, (res) => {
           if (res.statusCode === 200) {
-            console.log('Backend is ready!');
+            console.log('[Backend] Server is ready!');
             resolve();
           } else {
+            console.log(`[Backend] Server responded with status ${res.statusCode}`);
             setTimeout(checkServer, 500);
           }
-        }).on('error', (err) => {
-          console.log(`Backend check attempt ${attempts}/${maxAttempts}: ${err.code}`);
+        });
+        
+        req.on('error', (err) => {
+          if (attempts % 10 === 0) {
+            console.log(`[Backend] Check attempt ${attempts}/${maxAttempts}: ${err.code}`);
+          }
+          setTimeout(checkServer, 500);
+        });
+        
+        req.setTimeout(5000, () => {
+          req.destroy();
           setTimeout(checkServer, 500);
         });
       };
 
       // Start checking after short delay
-      setTimeout(checkServer, 500);
+      console.log('[Backend] Starting health checks...');
+      setTimeout(checkServer, 1000);
       
     } catch (error) {
-      console.error('Failed to start backend:', error);
+      console.error('[Backend] Failed to start backend:', error);
       reject(error);
     }
   });

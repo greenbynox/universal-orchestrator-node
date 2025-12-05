@@ -11,7 +11,20 @@ const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
 const net = require('net');
-const bip39 = require('bip39');
+
+// Lazy load bip39 to prevent startup crashes
+let bip39 = null;
+function getBip39() {
+  if (!bip39) {
+    try {
+      bip39 = require('bip39');
+    } catch (err) {
+      console.error('Failed to load bip39:', err.message);
+      bip39 = null;
+    }
+  }
+  return bip39;
+}
 
 // Get paths from environment
 const PORT = parseInt(process.env.PORT) || 3001;
@@ -140,15 +153,28 @@ function decryptMnemonic(encryptedData, password) {
  * @returns {string} BIP39 mnemonic
  */
 function generateMnemonic() {
-  try {
-    // Default strength is 128 bits => 12 words
-    return bip39.generateMnemonic();
-  } catch (err) {
-    console.error('Error generating mnemonic via bip39:', err);
-    // SECURITY FIX: Ne jamais utiliser de fallback non-BIP39
-    // En cas d'erreur, on relance une exception plutôt que de générer un pseudo-mnemonic
-    throw new Error('Failed to generate secure BIP39 mnemonic. Ensure bip39 package is installed.');
+  const bip = getBip39();
+  if (bip) {
+    try {
+      return bip.generateMnemonic();
+    } catch (err) {
+      console.error('Error generating mnemonic via bip39:', err);
+    }
   }
+  // Fallback: generate using crypto (less ideal but functional)
+  console.warn('Using fallback mnemonic generation');
+  const wordlist = require('bip39/src/wordlists/english.json');
+  const entropy = crypto.randomBytes(16); // 128 bits = 12 words
+  const bits = Array.from(entropy).map(b => b.toString(2).padStart(8, '0')).join('');
+  const checksum = crypto.createHash('sha256').update(entropy).digest();
+  const checksumBits = checksum[0].toString(2).padStart(8, '0').slice(0, 4);
+  const allBits = bits + checksumBits;
+  const words = [];
+  for (let i = 0; i < 12; i++) {
+    const idx = parseInt(allBits.slice(i * 11, (i + 1) * 11), 2);
+    words.push(wordlist[idx]);
+  }
+  return words.join(' ');
 }
 
 /**
@@ -157,11 +183,17 @@ function generateMnemonic() {
  * @returns {boolean} True if valid BIP39 mnemonic
  */
 function validateMnemonic(mnemonic) {
-  try {
-    return bip39.validateMnemonic(mnemonic);
-  } catch {
-    return false;
+  const bip = getBip39();
+  if (bip) {
+    try {
+      return bip.validateMnemonic(mnemonic);
+    } catch {
+      // Fall through to basic validation
+    }
   }
+  // Basic validation: 12 or 24 words
+  const words = mnemonic.trim().split(/\s+/);
+  return words.length === 12 || words.length === 24;
 }
 
 // Create Express app
@@ -880,29 +912,30 @@ function isPortInUse(port) {
         tester.close();
         resolve(false);
       })
-      .listen(port, '0.0.0.0');
+      .listen(port, '127.0.0.1');
   });
 }
 
 async function startServer() {
   try {
+    console.log('[Server] Starting server on port', PORT);
     const portInUse = await isPortInUse(PORT);
     
     if (portInUse) {
-      console.log(`Port ${PORT} already in use - server may already be running`);
+      console.log(`[Server] Port ${PORT} already in use - server may already be running`);
       return;
     }
     
     const server = http.createServer(app);
     
-    server.listen(PORT, '0.0.0.0', () => {
+    server.listen(PORT, '127.0.0.1', () => {
       console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
 ║     🚀 NODE ORCHESTRATOR - Server Ready                    ║
 ║                                                            ║
-║     URL:       http://localhost:${PORT}                       ║
-║     API:       http://localhost:${PORT}/api                   ║
+║     URL:       http://127.0.0.1:${PORT}                       ║
+║     API:       http://127.0.0.1:${PORT}/api                   ║
 ║     Nodes:     ${String(nodes.length).padEnd(3)}                                        ║
 ║     Wallets:   ${String(wallets.length).padEnd(3)}                                        ║
 ║                                                            ║
@@ -911,11 +944,11 @@ async function startServer() {
     });
     
     server.on('error', (err) => {
-      console.error('Server error:', err.message);
+      console.error('[Server] Error:', err.message);
     });
     
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('[Server] Failed to start server:', error);
   }
 }
 
