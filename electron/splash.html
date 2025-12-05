@@ -337,16 +337,36 @@
     }
     
     // Listen for IPC messages from main process
-    if (window.electronAPI && window.electronAPI.onSplashUpdate) {
-      window.electronAPI.onSplashUpdate((data) => {
-        if (data.status) updateStatus(data.status);
-        if (data.progress !== undefined) updateProgress(data.progress);
-        if (data.log) addLog(data.log.id, data.log.text, data.log.status);
-      });
-    } else {
-      // Fallback simulation for when IPC is not available
-      simulateStartup();
+    let ipcConnected = false;
+    
+    function setupIPC() {
+      if (window.electronAPI && window.electronAPI.onSplashUpdate) {
+        console.log('IPC connected');
+        ipcConnected = true;
+        window.electronAPI.onSplashUpdate((data) => {
+          console.log('Splash update received:', data);
+          if (data.status) updateStatus(data.status);
+          if (data.progress !== undefined) updateProgress(data.progress);
+          if (data.log) addLog(data.log.id, data.log.text, data.log.status);
+        });
+        return true;
+      }
+      return false;
     }
+    
+    // Try immediately and retry
+    function tryConnectIPC(retries = 10) {
+      if (setupIPC()) return;
+      if (retries > 0) {
+        setTimeout(() => tryConnectIPC(retries - 1), 100);
+      } else {
+        console.log('No IPC after retries, starting simulation');
+        simulateStartup();
+      }
+    }
+    
+    // Start connection attempts
+    tryConnectIPC();
     
     function simulateStartup() {
       const steps = [
