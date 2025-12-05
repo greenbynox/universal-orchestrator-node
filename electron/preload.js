@@ -25,6 +25,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Actions
   onAction: (callback) => ipcRenderer.on('action', (event, action, data) => callback(action, data)),
 
+  // Splash screen updates
+  onSplashUpdate: (callback) => ipcRenderer.on('splash-update', (event, data) => callback(data)),
+
   // System
   isElectron: true,
 });

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Node Orchestrator</title>
+  <title>Node Orchestrator - Chargement</title>
   <style>
     * {
       margin: 0;
@@ -15,22 +15,29 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
       background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0a0a0f 100%);
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
       overflow: hidden;
       -webkit-app-region: drag;
+      padding: 20px;
     }
 
     .container {
       text-align: center;
       color: white;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
 
     .logo {
-      width: 120px;
-      height: 120px;
-      margin: 0 auto 30px;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 15px;
       position: relative;
     }
 
@@ -74,7 +81,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 24px;
+      font-size: 16px;
     }
 
     @keyframes spin {
@@ -83,50 +90,143 @@
     }
 
     h1 {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 600;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
       background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
-    .status {
-      font-size: 14px;
-      color: #64748b;
-      margin-bottom: 20px;
+    .current-status {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 12px;
+      min-height: 18px;
     }
 
-    .loading-dots {
-      display: inline-flex;
-      gap: 4px;
+    /* Progress bar */
+    .progress-container {
+      width: 300px;
+      margin-bottom: 12px;
     }
 
-    .loading-dots span {
-      width: 6px;
+    .progress-bar {
+      width: 100%;
       height: 6px;
-      background: #3b82f6;
-      border-radius: 50%;
-      animation: bounce 1.4s infinite ease-in-out both;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
     }
 
-    .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
-    .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
-    .loading-dots span:nth-child(3) { animation-delay: 0s; }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
 
-    @keyframes bounce {
-      0%, 80%, 100% { transform: scale(0); }
-      40% { transform: scale(1); }
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .eta {
+      color: #8b5cf6;
+      font-weight: 500;
+    }
+
+    /* Log area */
+    .log-container {
+      width: 340px;
+      height: 140px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px;
+      margin-top: 8px;
+      overflow-y: auto;
+      -webkit-app-region: no-drag;
+    }
+
+    .log-container::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .log-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .log-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+    }
+
+    .log-entry {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 5px;
+      text-align: left;
+    }
+
+    .log-entry:last-child {
+      margin-bottom: 0;
+    }
+
+    .log-icon {
+      flex-shrink: 0;
+      width: 14px;
+      text-align: center;
+      font-size: 10px;
+    }
+
+    .log-icon.pending {
+      color: #fbbf24;
+      animation: pulse 1s infinite;
+    }
+
+    .log-icon.success {
+      color: #22c55e;
+    }
+
+    .log-icon.error {
+      color: #ef4444;
+    }
+
+    .log-icon.info {
+      color: #3b82f6;
+    }
+
+    .log-text {
+      flex: 1;
+      line-height: 1.3;
+    }
+
+    .log-time {
+      flex-shrink: 0;
+      color: #475569;
+      font-size: 10px;
+      min-width: 35px;
+      text-align: right;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
 
     .version {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 12px;
+      font-size: 10px;
       color: #475569;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -139,15 +239,149 @@
       <div class="logo-center">🚀</div>
     </div>
     <h1>Node Orchestrator</h1>
-    <p class="status">
-      Démarrage en cours
-      <span class="loading-dots">
-        <span></span>
-        <span></span>
-        <span></span>
-      </span>
-    </p>
+    <p class="current-status" id="currentStatus">Initialisation...</p>
+    
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-info">
+        <span id="progressPercent">0%</span>
+        <span class="eta" id="eta">⏱ ~30s</span>
+      </div>
+    </div>
+
+    <div class="log-container" id="logContainer">
+    </div>
   </div>
-  <div class="version">v1.0.0 • 205+ Blockchains</div>
+  
+  <div class="version">v1.0.2 • 205+ Blockchains</div>
+
+  <script>
+    const logContainer = document.getElementById('logContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+    const currentStatus = document.getElementById('currentStatus');
+    const etaElement = document.getElementById('eta');
+    
+    const startTime = Date.now();
+    let currentProgress = 0;
+    let logs = new Map();
+    
+    function formatTime(seconds) {
+      if (seconds <= 0) return 'Presque prêt...';
+      if (seconds < 60) return `⏱ ~${Math.ceil(seconds)}s`;
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.ceil(seconds % 60);
+      return `⏱ ~${mins}m ${secs}s`;
+    }
+    
+    function getElapsed() {
+      return ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+    }
+    
+    function updateProgress(percent) {
+      currentProgress = Math.min(100, percent);
+      progressFill.style.width = currentProgress + '%';
+      progressPercent.textContent = Math.round(currentProgress) + '%';
+      
+      // Estimate remaining time based on progress
+      if (currentProgress > 0 && currentProgress < 100) {
+        const elapsed = (Date.now() - startTime) / 1000;
+        const estimated = (elapsed / currentProgress) * (100 - currentProgress);
+        etaElement.textContent = formatTime(estimated);
+      } else if (currentProgress >= 100) {
+        etaElement.textContent = '✓ Terminé';
+      }
+    }
+    
+    function addLog(id, text, status = 'pending') {
+      const iconMap = {
+        'pending': '⏳',
+        'success': '✓',
+        'error': '✗',
+        'info': 'ℹ'
+      };
+      
+      // Check if log exists
+      let entry = document.getElementById(`log-${id}`);
+      
+      if (entry) {
+        // Update existing
+        const icon = entry.querySelector('.log-icon');
+        const timeSpan = entry.querySelector('.log-time');
+        icon.className = `log-icon ${status}`;
+        icon.textContent = iconMap[status];
+        if (status === 'success' || status === 'error') {
+          timeSpan.textContent = getElapsed();
+        }
+      } else {
+        // Create new
+        entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.id = `log-${id}`;
+        entry.innerHTML = `
+          <span class="log-icon ${status}">${iconMap[status]}</span>
+          <span class="log-text">${text}</span>
+          <span class="log-time">${status === 'pending' ? '' : getElapsed()}</span>
+        `;
+        logContainer.appendChild(entry);
+      }
+      
+      logContainer.scrollTop = logContainer.scrollHeight;
+      logs.set(id, { text, status });
+    }
+    
+    function updateStatus(status) {
+      currentStatus.textContent = status;
+    }
+    
+    // Listen for IPC messages from main process
+    if (window.electronAPI && window.electronAPI.onSplashUpdate) {
+      window.electronAPI.onSplashUpdate((data) => {
+        if (data.status) updateStatus(data.status);
+        if (data.progress !== undefined) updateProgress(data.progress);
+        if (data.log) addLog(data.log.id, data.log.text, data.log.status);
+      });
+    } else {
+      // Fallback simulation for when IPC is not available
+      simulateStartup();
+    }
+    
+    function simulateStartup() {
+      const steps = [
+        { id: 'init', text: 'Démarrage de l\'application...', progress: 5, delay: 0 },
+        { id: 'env', text: 'Configuration de l\'environnement...', progress: 10, delay: 800 },
+        { id: 'data', text: 'Vérification des données locales...', progress: 20, delay: 1500 },
+        { id: 'deps', text: 'Chargement des dépendances...', progress: 30, delay: 2500 },
+        { id: 'server-init', text: 'Initialisation du serveur...', progress: 40, delay: 4000 },
+        { id: 'server-start', text: 'Démarrage du serveur Express...', progress: 55, delay: 6000 },
+        { id: 'server-listen', text: 'Écoute sur le port 3001...', progress: 70, delay: 10000 },
+        { id: 'health', text: 'Vérification de la santé du serveur...', progress: 85, delay: 15000 },
+        { id: 'ui', text: 'Préparation de l\'interface...', progress: 95, delay: 20000 },
+      ];
+      
+      steps.forEach((step, index) => {
+        setTimeout(() => {
+          // Mark previous as success
+          if (index > 0) {
+            addLog(steps[index - 1].id, steps[index - 1].text, 'success');
+          }
+          // Add current as pending
+          addLog(step.id, step.text, 'pending');
+          updateStatus(step.text.replace('...', ''));
+          updateProgress(step.progress);
+        }, step.delay);
+      });
+      
+      // Final success
+      setTimeout(() => {
+        addLog('ui', 'Préparation de l\'interface...', 'success');
+        addLog('ready', 'Application prête !', 'success');
+        updateStatus('Lancement...');
+        updateProgress(100);
+      }, 25000);
+    }
+  </script>
 </body>
 </html>
