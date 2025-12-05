@@ -112,7 +112,7 @@ router.get('/health', async (_req: Request, res: Response) => {
     data: {
       status: 'healthy',
       uptime: process.uptime(),
-      version: '1.0.0',
+      version: '1.0.3',
     },
     timestamp: new Date(),
   });

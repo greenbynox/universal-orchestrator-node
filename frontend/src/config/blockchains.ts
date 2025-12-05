@@ -1,5 +1,5 @@
 // Complete blockchain registry with proper names, symbols and icons
-// 205 blockchains for Node Orchestrator v1.0.0
+// 205 blockchains for Node Orchestrator v1.0.3
 
 export interface BlockchainInfo {
   id: string;

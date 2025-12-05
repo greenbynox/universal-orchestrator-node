@@ -1,6 +1,6 @@
 {
   "name": "node-orchestrator",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "MVP Orchestrateur de Nodes Multi-Blockchains (173+ blockchains)",
   "main": "electron/main.js",
   "scripts": {

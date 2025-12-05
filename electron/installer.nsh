@@ -1,8 +1,8 @@
 ; Node Orchestrator NSIS Installer Script
-; Version 1.0.0 - Offline Installer
+; Version 1.0.3 - Offline Installer
 
 !macro customHeader
-  !system "echo 'Building Node Orchestrator v1.0.0 Installer...'"
+  !system "echo 'Building Node Orchestrator v1.0.3 Installer...'"
 !macroend
 
 !macro preInit

@@ -32,7 +32,7 @@ Nous croyons que tout le monde devrait pouvoir participer à la décentralisatio
 
 ---
 
-## ✨ Fonctionnalités v1.0.0
+## ✨ Fonctionnalités v1.0.3
 
 ### 🔗 205+ Blockchains Supportées
 
@@ -81,10 +81,10 @@ Nous croyons que tout le monde devrait pouvoir participer à la décentralisatio
 
 ### Windows (Recommandé)
 
-> **[📥 Télécharger Node Orchestrator v1.0.0 (Windows)](https://github.com/greenbynox/universal-orchestrator-node/releases)**
+> **[📥 Télécharger Node Orchestrator v1.0.3 (Windows)](https://github.com/greenbynox/universal-orchestrator-node/releases)**
 
-- `Node Orchestrator-1.0.0-Setup.exe` - Installateur Windows
-- `Node Orchestrator-1.0.0-Portable.exe` - Version portable (aucune installation)
+- `Node Orchestrator-1.0.3-Setup.exe` - Installateur Windows
+- `Node Orchestrator-1.0.3-Portable.exe` - Version portable (aucune installation)
 
 ### Depuis les sources
 
@@ -310,6 +310,6 @@ Ce projet est sous licence **MIT** - voir le fichier [LICENSE](LICENSE) pour plu
 
 🌐 Décentralisation pour tous 🌐
 
-<sub>v1.0.0 - Décembre 2025</sub>
+<sub>v1.0.3 - Décembre 2025</sub>
 
 </div>

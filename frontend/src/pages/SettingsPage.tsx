@@ -141,7 +141,7 @@ export default function SettingsPage() {
         setSystemHealth({
           status: 'healthy',
           uptime: 0,
-          version: '1.0.0'
+          version: '1.0.3'
         });
       }
     };
@@ -388,7 +388,7 @@ export default function SettingsPage() {
           </p>
           <div className="bg-dark-900 rounded-lg p-4 mt-4">
             <p className="text-sm">
-              <span className="text-dark-400">Version:</span> <span className="text-white">1.0.0</span><br />
+              <span className="text-dark-400">Version:</span> <span className="text-white">1.0.3</span><br />
               <span className="text-dark-400">Licence:</span> <span className="text-green-400">MIT (100% Gratuit)</span><br />
               <span className="text-dark-400">GitHub:</span>{' '}
               <a 
