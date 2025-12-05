@@ -17,7 +17,7 @@ export default function NodesPage() {
     if (filterBlockchain !== 'all' && node.config.blockchain !== filterBlockchain) {
       return false;
     }
-    if (filterStatus !== 'all' && node.state.status !== filterStatus) {
+    if (filterStatus !== 'all' && node.state?.status !== filterStatus) {
       return false;
     }
     return true;

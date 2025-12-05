@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Erreur - Node Orchestrator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 500px;
+    }
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 16px;
+      color: #f87171;
+    }
+    p {
+      color: #94a3b8;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    button {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+    .status {
+      margin-top: 24px;
+      padding: 16px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+    }
+    .checking {
+      color: #fbbf24;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">⚠️</div>
+    <h1>Erreur de chargement</h1>
+    <p>
+      L'interface n'a pas pu se charger correctement. 
+      Le serveur backend est peut-être en cours de démarrage.
+    </p>
+    <button onclick="retry()">🔄 Réessayer</button>
+    
+    <div class="status">
+      <div class="status-item">
+        <span>Serveur API:</span>
+        <span id="api-status" class="checking">Vérification...</span>
+      </div>
+      <div class="status-item">
+        <span>Port 3001:</span>
+        <span id="port-status" class="checking">Vérification...</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function checkServer() {
+      const apiStatus = document.getElementById('api-status');
+      const portStatus = document.getElementById('port-status');
+      
+      try {
+        const response = await fetch('http://localhost:3001/api/health');
+        if (response.ok) {
+          apiStatus.textContent = '✅ En ligne';
+          apiStatus.style.color = '#4ade80';
+          portStatus.textContent = '✅ Ouvert';
+          portStatus.style.color = '#4ade80';
+          
+          // Auto-reload after server is ready
+          setTimeout(() => {
+            window.location.href = 'http://localhost:3001';
+          }, 1000);
+        } else {
+          apiStatus.textContent = '❌ Erreur ' + response.status;
+          apiStatus.style.color = '#f87171';
+        }
+      } catch (e) {
+        apiStatus.textContent = '❌ Non disponible';
+        apiStatus.style.color = '#f87171';
+        portStatus.textContent = '❌ Fermé';
+        portStatus.style.color = '#f87171';
+      }
+    }
+
+    function retry() {
+      window.location.href = 'http://localhost:3001';
+    }
+
+    // Check server status on load
+    checkServer();
+    
+    // Retry every 3 seconds
+    setInterval(checkServer, 3000);
+  </script>
+</body>
+</html>

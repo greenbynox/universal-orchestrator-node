@@ -5,17 +5,13 @@ import Dashboard from './pages/Dashboard';
 import NodesPage from './pages/NodesPage';
 import WalletsPage from './pages/WalletsPage';
 import SettingsPage from './pages/SettingsPage';
-import { wsService } from './services/websocket';
 import { nodesApi, walletsApi, systemApi } from './services/api';
 import { useStore } from './store';
 
 function App() {
-  const { setNodes, setWallets, setSystemResources, setLoading } = useStore();
+  const { setNodes, setWallets, setSystemResources, setLoading, setConnected } = useStore();
 
   useEffect(() => {
-    // Connecter WebSocket
-    wsService.connect();
-
     // Charger les données initiales
     const loadInitialData = async () => {
       setLoading(true);
@@ -29,8 +25,10 @@ function App() {
         setNodes(nodes);
         setWallets(wallets);
         setSystemResources(resources);
+        setConnected(true);  // API is responding = connected
       } catch (error) {
         console.error('Erreur chargement données:', error);
+        setConnected(false);
       } finally {
         setLoading(false);
       }
@@ -38,10 +36,23 @@ function App() {
 
     loadInitialData();
 
-    return () => {
-      wsService.disconnect();
-    };
-  }, [setNodes, setWallets, setSystemResources, setLoading]);
+    // Refresh data every 5 seconds (nodes + system resources)
+    const interval = setInterval(async () => {
+      try {
+        const [nodes, resources] = await Promise.all([
+          nodesApi.getAll(),
+          systemApi.getResources(),
+        ]);
+        setNodes(nodes);
+        setSystemResources(resources);
+        setConnected(true);
+      } catch {
+        setConnected(false);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [setNodes, setWallets, setSystemResources, setLoading, setConnected]);
 
   return (
     <Layout>

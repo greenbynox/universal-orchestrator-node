@@ -33,13 +33,26 @@
   "win": {
     "target": [
       {
-        "target": "portable",
+        "target": "nsis",
         "arch": ["x64"]
       }
     ],
     "icon": "electron/icons/icon.ico",
     "signAndEditExecutable": false,
-    "artifactName": "${productName}-${version}-Windows.${ext}"
+    "artifactName": "${productName}-${version}-Setup.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "electron/icons/icon.ico",
+    "uninstallerIcon": "electron/icons/icon.ico",
+    "installerHeaderIcon": "electron/icons/icon.ico",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Node Orchestrator",
+    "include": "electron/installer.nsh",
+    "license": "LICENSE",
+    "artifactName": "${productName}-${version}-Setup.${ext}"
   },
   "portable": {
     "artifactName": "${productName}-${version}-Portable.${ext}"

@@ -14,7 +14,8 @@ const http = require('http');
 // CONFIGURATION
 // ============================================================
 
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const isDev = process.env.NODE_ENV === 'development';
+const isDevMode = isDev && !app.isPackaged;
 const BACKEND_PORT = 3001;
 const FRONTEND_PORT = isDev ? 5173 : 3001;
 
@@ -71,32 +72,45 @@ function createMainWindow() {
     height: 900,
     minWidth: 1000,
     minHeight: 700,
-    show: false,
+    show: true,  // Show immediately
+    center: true, // Center on screen
     icon: path.join(__dirname, 'icons', 'icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
-    titleBarStyle: 'hiddenInset',
+    // Only use hiddenInset on macOS
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' } : {}),
     backgroundColor: '#0a0a0f',
   });
 
+  console.log('Main window created, showing...');
+  
+  // Close splash immediately since we show main window
+  if (splashWindow) {
+    splashWindow.destroy();
+    splashWindow = null;
+  }
+
   // Load frontend
-  if (isDev) {
+  if (isDevMode) {
+    console.log('Loading dev URL:', `http://localhost:${FRONTEND_PORT}`);
     mainWindow.loadURL(`http://localhost:${FRONTEND_PORT}`);
     mainWindow.webContents.openDevTools();
   } else {
+    console.log('Loading production URL:', `http://localhost:${BACKEND_PORT}`);
     mainWindow.loadURL(`http://localhost:${BACKEND_PORT}`);
   }
 
-  mainWindow.once('ready-to-show', () => {
-    if (splashWindow) {
-      splashWindow.destroy();
-      splashWindow = null;
-    }
-    mainWindow.show();
-    mainWindow.focus();
+  // Handle load errors
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load:', errorCode, errorDescription);
+    mainWindow.loadFile(path.join(__dirname, 'error.html'));
+  });
+  
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Page loaded successfully');
   });
 
   mainWindow.on('close', (event) => {
@@ -127,14 +141,15 @@ function createMainWindow() {
 // ============================================================
 
 function createTray() {
-  const iconPath = path.join(__dirname, 'icons', 'tray-icon.png');
-  
-  // Create default icon if not exists
-  if (!fs.existsSync(iconPath)) {
-    tray = new Tray(path.join(__dirname, 'icons', 'icon.png'));
-  } else {
+  try {
+    const iconPath = path.join(__dirname, 'icons', 'icon.png');
+    
+    if (!fs.existsSync(iconPath)) {
+      console.warn('Tray icon not found, skipping tray creation');
+      return;
+    }
+    
     tray = new Tray(iconPath);
-  }
 
   const contextMenu = Menu.buildFromTemplate([
     { 
@@ -193,6 +208,9 @@ function createTray() {
       }
     }
   });
+  } catch (error) {
+    console.error('Failed to create tray:', error);
+  }
 }
 
 // ============================================================

@@ -51,11 +51,11 @@ export const useStore = create<AppState>((set: StoreApi<AppState>['setState']) =
   setNodes: (nodes: NodeInfo[]) => set({ nodes }),
   addNode: (node: NodeInfo) => set((state: AppState) => ({ nodes: [...state.nodes, node] })),
   removeNode: (nodeId) => set((state) => ({
-    nodes: state.nodes.filter((n) => n.config.id !== nodeId),
+    nodes: state.nodes.filter((n) => n?.config?.id !== nodeId),
   })),
   updateNodeStatus: (nodeId, status, error) => set((state) => ({
     nodes: state.nodes.map((n) =>
-      n.config.id === nodeId
+      n?.config?.id === nodeId
         ? { ...n, state: { ...n.state, status, lastError: error } }
         : n
     ),

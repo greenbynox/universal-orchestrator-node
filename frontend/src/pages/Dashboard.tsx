@@ -20,18 +20,21 @@ export default function Dashboard() {
   // Stats
   const totalNodes = nodes.length;
   const runningNodes = nodes.filter(
-    (n) => n.state.status === 'ready' || n.state.status === 'syncing'
+    (n) => n.state?.status === 'ready' || n.state?.status === 'syncing'
   ).length;
   const totalWallets = wallets.length;
 
-  // Nodes par blockchain
+  // Nodes par blockchain (with safety check)
   const nodesByBlockchain = nodes.reduce((acc, node) => {
-    acc[node.config.blockchain] = (acc[node.config.blockchain] || 0) + 1;
+    if (node?.config?.blockchain) {
+      acc[node.config.blockchain] = (acc[node.config.blockchain] || 0) + 1;
+    }
     return acc;
   }, {} as Record<BlockchainType, number>);
 
-  // Les 4 derniers nodes
+  // Les 4 derniers nodes (with safety check)
   const recentNodes = [...nodes]
+    .filter(n => n?.config?.createdAt)
     .sort((a, b) => new Date(b.config.createdAt).getTime() - new Date(a.config.createdAt).getTime())
     .slice(0, 4);
 
@@ -126,7 +129,7 @@ export default function Dashboard() {
             <div>
               <p className="text-sm text-dark-400">Stockage Dispo</p>
               <p className="text-2xl font-bold text-white">
-                {systemResources?.availableDiskGB?.toFixed(0) || '-'} GB
+                {((systemResources?.availableDiskGB ?? 0).toFixed(0))} GB
               </p>
             </div>
           </div>
@@ -193,13 +196,13 @@ export default function Dashboard() {
               <div className="bg-dark-900 rounded-lg p-4">
                 <p className="text-sm text-dark-400 mb-1">Mémoire</p>
                 <p className="text-white font-medium">
-                  {systemResources.availableMemoryGB.toFixed(1)} / {systemResources.totalMemoryGB.toFixed(1)} GB
+                  {(systemResources?.availableMemoryGB ?? 0).toFixed(1)} / {(systemResources?.totalMemoryGB ?? 0).toFixed(1)} GB
                 </p>
               </div>
               <div className="bg-dark-900 rounded-lg p-4">
                 <p className="text-sm text-dark-400 mb-1">Stockage</p>
                 <p className="text-white font-medium">
-                  {systemResources.availableDiskGB.toFixed(0)} / {systemResources.totalDiskGB.toFixed(0)} GB
+                  {(systemResources?.availableDiskGB ?? 0).toFixed(0)} / {(systemResources?.totalDiskGB ?? 0).toFixed(0)} GB
                 </p>
               </div>
               <div className="bg-dark-900 rounded-lg p-4">
