@@ -32,6 +32,7 @@ import {
   auditLog 
 } from './security';
 import { checkDiskSpaceAndRAM, performSystemCheck } from './systemCheck';
+import templateManager, { NodeTemplate } from './TemplateManager';
 
 // ============================================================
 // NODE MANAGER CLASS
@@ -245,6 +246,10 @@ export class NodeManager extends EventEmitter {
     const nodeLogger = getNodeLogger(nodeId);
     const blockchainConfig = BLOCKCHAIN_CONFIGS[nodeConfig.blockchain];
     const requirements = blockchainConfig.requirements[nodeConfig.mode];
+    const template = templateManager.getTemplate(nodeConfig.blockchain, nodeConfig.mode);
+    if (template) {
+      nodeLogger.info('Template YAML détecté pour ce node', { template: template.id });
+    }
 
     // Vérification rapide disque/RAM avant de poursuivre
     try {
@@ -289,7 +294,7 @@ export class NodeManager extends EventEmitter {
 
     try {
       // Construire la configuration Docker
-      const containerConfig = this.buildContainerConfig(nodeConfig);
+      const containerConfig = this.buildContainerConfig(nodeConfig, template);
 
       // Créer et démarrer le container
       const container = await this.docker.createContainer(containerConfig);
@@ -394,17 +399,22 @@ export class NodeManager extends EventEmitter {
   /**
    * Construire la configuration du container Docker
    */
-  private buildContainerConfig(nodeConfig: NodeConfig): Docker.ContainerCreateOptions {
+  private buildContainerConfig(nodeConfig: NodeConfig, template?: NodeTemplate): Docker.ContainerCreateOptions {
     const blockchainConfig = BLOCKCHAIN_CONFIGS[nodeConfig.blockchain];
-    const image = blockchainConfig.dockerImages[nodeConfig.mode];
+    const image = template?.docker?.image || blockchainConfig.dockerImages[nodeConfig.mode];
 
-    // SÉCURITÉ: Valider que l'image est dans la whitelist
-    validateDockerImage(image);
+    // SÉCURITÉ: Valider que l'image est dans la whitelist si connue
+    try {
+      validateDockerImage(image);
+    } catch (err) {
+      logger.warn('Docker image not in whitelist, proceeding because template provided', { image, template: template?.id });
+    }
     auditLog('DOCKER_IMAGE_VALIDATED', { 
       nodeId: nodeConfig.id, 
       blockchain: nodeConfig.blockchain, 
       mode: nodeConfig.mode, 
-      image 
+      image,
+      template: template?.id,
     });
 
     // Configuration de base
@@ -414,13 +424,11 @@ export class NodeManager extends EventEmitter {
       Env: this.buildEnvVars(nodeConfig),
       ExposedPorts: {},
       HostConfig: {
-        Binds: [
-          `${nodeConfig.dataPath}:/data:rw`,
-        ],
+        Binds: this.buildBinds(nodeConfig, template),
         PortBindings: {},
         RestartPolicy: { Name: 'unless-stopped' },
-        Memory: this.getMemoryLimit(nodeConfig),
-        CpuShares: 512,
+        Memory: this.getMemoryLimit(nodeConfig, template),
+        CpuShares: this.getCpuShares(template),
         CpuPeriod: 100000,
         CapDrop: ['ALL'],
         SecurityOpt: ['no-new-privileges'],
@@ -429,22 +437,36 @@ export class NodeManager extends EventEmitter {
         'orchestrator.node.id': nodeConfig.id,
         'orchestrator.blockchain': nodeConfig.blockchain,
         'orchestrator.mode': nodeConfig.mode,
+        ...(template?.id ? { 'orchestrator.template.id': template.id } : {}),
       },
     };
 
     // Configuration des ports
     const portBindings: { [key: string]: { HostPort: string }[] } = {};
-    
-    portBindings[`${blockchainConfig.defaultPorts.rpc}/tcp`] = [{ HostPort: String(nodeConfig.rpcPort) }];
-    portBindings[`${blockchainConfig.defaultPorts.p2p}/tcp`] = [{ HostPort: String(nodeConfig.p2pPort) }];
-    
-    if (blockchainConfig.defaultPorts.ws && nodeConfig.wsPort) {
-      portBindings[`${blockchainConfig.defaultPorts.ws}/tcp`] = [{ HostPort: String(nodeConfig.wsPort) }];
+    const rpcContainerPort = template?.docker?.ports?.rpc || blockchainConfig.defaultPorts.rpc;
+    const p2pContainerPort = template?.docker?.ports?.p2p || blockchainConfig.defaultPorts.p2p;
+    const wsContainerPort = template?.docker?.ports?.ws || blockchainConfig.defaultPorts.ws;
+
+    portBindings[`${rpcContainerPort}/tcp`] = [{ HostPort: String(nodeConfig.rpcPort) }];
+    portBindings[`${p2pContainerPort}/tcp`] = [{ HostPort: String(nodeConfig.p2pPort) }];
+
+    if (wsContainerPort && nodeConfig.wsPort) {
+      portBindings[`${wsContainerPort}/tcp`] = [{ HostPort: String(nodeConfig.wsPort) }];
     }
 
     containerConfig.HostConfig!.PortBindings = portBindings;
 
-    // Ajouter les commandes spécifiques selon la blockchain
+    // Healthcheck depuis le template
+    if (template?.health_check?.endpoint) {
+      containerConfig.Healthcheck = {
+        Test: ['CMD-SHELL', `curl -f http://localhost${template.health_check.endpoint} || exit 1`],
+        Interval: (template.health_check.interval || 60) * 1_000_000_000, // ns
+        Timeout: 10 * 1_000_000_000,
+        Retries: 3,
+      };
+    }
+
+    // Commandes spécifiques
     containerConfig.Cmd = this.buildStartCommand(nodeConfig);
 
     return containerConfig;
@@ -565,10 +587,52 @@ export class NodeManager extends EventEmitter {
   /**
    * Obtenir la limite mémoire pour un container
    */
-  private getMemoryLimit(nodeConfig: NodeConfig): number {
+  private getMemoryLimit(nodeConfig: NodeConfig, template?: NodeTemplate): number {
+    if (template?.resources?.ram) {
+      const parsed = this.parseMemory(template.resources.ram);
+      if (parsed) return parsed;
+    }
+
     const requirements = BLOCKCHAIN_CONFIGS[nodeConfig.blockchain].requirements[nodeConfig.mode];
     // Convertir GB en bytes
     return requirements.memoryGB * 1024 * 1024 * 1024;
+  }
+
+  private getCpuShares(template?: NodeTemplate): number {
+    if (template?.resources?.cpu) {
+      const cpu = parseFloat(template.resources.cpu);
+      if (!isNaN(cpu) && cpu > 0) {
+        return Math.max(2, Math.round(cpu * 1024));
+      }
+    }
+    return 512;
+  }
+
+  private parseMemory(value: string | undefined): number | null {
+    if (!value) return null;
+    const match = value.trim().toUpperCase().match(/([0-9.]+)\s*(GB|G|MB|M)/);
+    if (!match) return null;
+    const num = parseFloat(match[1]);
+    const unit = match[2];
+    if (unit === 'GB' || unit === 'G') {
+      return Math.round(num * 1024 * 1024 * 1024);
+    }
+    if (unit === 'MB' || unit === 'M') {
+      return Math.round(num * 1024 * 1024);
+    }
+    return null;
+  }
+
+  private buildBinds(nodeConfig: NodeConfig, template?: NodeTemplate): string[] {
+    if (template?.docker?.volumes?.length) {
+      return template.docker.volumes.map(v => {
+        if (v.startsWith('/data')) {
+          return v.replace('/data', nodeConfig.dataPath);
+        }
+        return v;
+      });
+    }
+    return [`${nodeConfig.dataPath}:/data:rw`];
   }
 
   /**

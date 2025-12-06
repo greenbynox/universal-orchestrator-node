@@ -213,6 +213,14 @@ universal-orchestrator-node/
 
 ### ✅ Garantie 100% Gratuit
 
+---
+
+## V2.0 Core Infrastructure
+
+- **Templates YAML (Config-as-Code)** : chaque blockchain est décrite dans `src/templates/*.yaml` (image Docker, ports, volumes, ressources, healthcheck, patterns IA). Les nœuds se lancent désormais à partir de ces templates pour permettre la modularité et l'ajout de nouvelles chaînes sans toucher au code TypeScript.
+- **Template Loader** : le backend parse automatiquement les YAML via le `TemplateManager` et les injecte dans la configuration Docker (image, ports, volumes, healthcheck, ressources).
+- **Log Collector (préparation AI-Ops)** : les flux de logs Docker sont prêts à être collectés et structurés pour nourrir les modules d'IA (détection d'anomalies, maintenance prédictive). Un service dédié sera utilisé pour la rotation/ingestion.
+
 > **Ce code source a été audité et nettoyé de toute logique commerciale.**
 > 
 > - ❌ Aucun plan "premium" ou "enterprise"

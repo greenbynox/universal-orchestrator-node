@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Node {
+  id           String   @id @default(cuid())
+  name         String
+  blockchain   String
+  mode         String
+  dataPath     String
+  rpcPort      Int
+  p2pPort      Int
+  wsPort       Int?
+  status       String   @default("stopped")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  metrics      MetricPoint[]
+  logs         LogEntry[]
+}
+
+model MetricPoint {
+  id        String   @id @default(cuid())
+  nodeId    String
+  cpuUsage  Float
+  memoryUsage Float
+  diskUsage Float?
+  networkIn Float?
+  networkOut Float?
+  createdAt DateTime @default(now())
+  node      Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+}
+
+model LogEntry {
+  id        String   @id @default(cuid())
+  nodeId    String
+  level     String
+  message   String
+  timestamp DateTime @default(now())
+  node      Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+}

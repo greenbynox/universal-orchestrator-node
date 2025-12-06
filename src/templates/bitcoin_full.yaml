@@ -1,0 +1,29 @@
+id: "bitcoin-core-full"
+blockchain: "bitcoin"
+mode: "full"
+name: "Bitcoin Core"
+category: "L1"
+docker:
+  image: "kylemanna/bitcoind:latest"
+  ports:
+    rpc: 8332
+    p2p: 8333
+  volumes:
+    - "/data:/root/.bitcoin"
+resources:
+  ram: "4GB"
+  cpu: "1"
+  disk: "500GB"
+ai_ops:
+  log_patterns:
+    - pattern: "Disk space is low"
+      action: "trigger_pruning"
+    - pattern: "Corrupted block database"
+      action: "alert_critical"
+health_check:
+  endpoint: "/rest/chaininfo"
+  interval: 60
+pruning_command:
+  - "bitcoin-cli"
+  - "prune"
+  - "3000"

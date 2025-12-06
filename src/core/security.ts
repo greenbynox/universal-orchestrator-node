@@ -130,6 +130,12 @@ export const DOCKER_IMAGE_WHITELIST: Set<string> = new Set([
   'hashgraph/hedera-mirror-node:latest',
 ]);
 
+// Registries / prefixes autorisés (patterns)
+export const DOCKER_REGISTRY_WHITELIST: string[] = [
+  'ghcr.io/universal-orchestrator/',
+  'kylemanna/',
+];
+
 /**
  * Patterns d'images autorisés (regex pour flexibilité)
  * Utilisé pour les versions spécifiques
@@ -164,6 +170,13 @@ export function isImageAllowed(image: string): boolean {
   // Vérifier les patterns (pour les versions spécifiques)
   for (const pattern of DOCKER_IMAGE_PATTERNS) {
     if (pattern.test(normalizedImage)) {
+      return true;
+    }
+  }
+
+  // Vérifier les registries whitelistees
+  for (const prefix of DOCKER_REGISTRY_WHITELIST) {
+    if (normalizedImage.startsWith(prefix)) {
       return true;
     }
   }
