@@ -25,6 +25,13 @@ import { config, BLOCKCHAIN_CONFIGS, getNextAvailablePort } from '../config';
 import { logger, getNodeLogger } from '../utils/logger';
 import { generateSecureId } from '../utils/crypto';
 import { canRunNode, recommendNodeMode } from '../utils/system';
+import { 
+  validateCreateNodeRequest, 
+  validateDockerImage, 
+  sanitizeNodeName,
+  auditLog 
+} from './security';
+import { performSystemCheck } from './systemCheck';
 
 // ============================================================
 // NODE MANAGER CLASS
@@ -127,11 +134,18 @@ export class NodeManager extends EventEmitter {
    * Créer un nouveau node
    */
   async createNode(request: CreateNodeRequest): Promise<NodeInfo> {
-    const blockchain = request.blockchain;
+    // SÉCURITÉ: Valider et nettoyer toutes les entrées
+    const validatedRequest = validateCreateNodeRequest({
+      name: request.name,
+      blockchain: request.blockchain,
+      mode: request.mode,
+    });
+    
+    const blockchain = validatedRequest.blockchain;
     const blockchainConfig = BLOCKCHAIN_CONFIGS[blockchain];
     
     // Déterminer le mode (auto-détection si non spécifié)
-    let mode = request.mode;
+    let mode = validatedRequest.mode;
     if (!mode) {
       const recommendation = await recommendNodeMode(blockchain);
       mode = recommendation.recommendedMode;
@@ -231,6 +245,27 @@ export class NodeManager extends EventEmitter {
     const nodeLogger = getNodeLogger(nodeId);
     const blockchainConfig = BLOCKCHAIN_CONFIGS[nodeConfig.blockchain];
 
+    // SÉCURITÉ: Vérifier les ressources système avant le démarrage
+    nodeLogger.info('Vérification des ressources système...');
+    const systemCheck = await performSystemCheck(nodeConfig.blockchain, nodeConfig.mode);
+    
+    if (!systemCheck.passed) {
+      const errorMessage = systemCheck.errors.join('\n');
+      nodeLogger.error('Ressources insuffisantes', { errors: systemCheck.errors });
+      auditLog('NODE_START_BLOCKED', { 
+        nodeId, 
+        blockchain: nodeConfig.blockchain, 
+        mode: nodeConfig.mode,
+        reason: errorMessage 
+      });
+      throw new Error(`Impossible de démarrer le node: ${errorMessage}`);
+    }
+    
+    // Log les warnings s'il y en a
+    if (systemCheck.warnings.length > 0) {
+      systemCheck.warnings.forEach(w => nodeLogger.warn(w));
+    }
+
     // Mettre à jour le statut
     nodeState.status = 'starting';
     this.emit('node:status', { nodeId, status: 'starting' });
@@ -250,6 +285,7 @@ export class NodeManager extends EventEmitter {
       nodeState.uptime = 0;
 
       nodeLogger.info(`Container démarré: ${container.id.slice(0, 12)}`);
+      auditLog('NODE_STARTED', { nodeId, containerId: container.id.slice(0, 12) });
       this.emit('node:status', { nodeId, status: 'syncing' });
 
       // Attacher les logs
@@ -346,9 +382,18 @@ export class NodeManager extends EventEmitter {
     const blockchainConfig = BLOCKCHAIN_CONFIGS[nodeConfig.blockchain];
     const image = blockchainConfig.dockerImages[nodeConfig.mode];
 
+    // SÉCURITÉ: Valider que l'image est dans la whitelist
+    validateDockerImage(image);
+    auditLog('DOCKER_IMAGE_VALIDATED', { 
+      nodeId: nodeConfig.id, 
+      blockchain: nodeConfig.blockchain, 
+      mode: nodeConfig.mode, 
+      image 
+    });
+
     // Configuration de base
     const containerConfig: Docker.ContainerCreateOptions = {
-      name: `orchestrator-${nodeConfig.id}`,
+      name: `orchestrator-${sanitizeNodeName(nodeConfig.id)}`,
       Image: image,
       Env: this.buildEnvVars(nodeConfig),
       ExposedPorts: {},

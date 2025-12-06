@@ -122,45 +122,6 @@ export interface WalletInfo {
 }
 
 // ============================================================
-// PAYMENT INTERFACES
-// ============================================================
-
-/** Statut d'un paiement */
-export type PaymentStatus = 'pending' | 'confirmed' | 'failed' | 'expired';
-
-/** Type de paiement */
-export type PaymentCurrency = 'BTC' | 'ETH' | 'USDC' | 'SOL' | 'BNB';
-
-/** Plan d'abonnement */
-export type SubscriptionPlan = 'free' | 'basic' | 'premium' | 'enterprise';
-
-/** Détails d'un paiement */
-export interface Payment {
-  id: string;
-  userId: string;
-  amount: number;
-  currency: PaymentCurrency;
-  amountUSD: number;
-  status: PaymentStatus;
-  txHash?: string;
-  toAddress: string;
-  plan: SubscriptionPlan;
-  createdAt: Date;
-  expiresAt: Date;
-  confirmedAt?: Date;
-}
-
-/** Configuration de prix */
-export interface PricingPlan {
-  plan: SubscriptionPlan;
-  priceUSD: number;
-  maxNodes: number;
-  features: string[];
-  cloudHosting: boolean;
-  support: 'community' | 'email' | 'priority';
-}
-
-// ============================================================
 // SYSTEM INTERFACES
 // ============================================================
 

@@ -2,18 +2,19 @@
  * ============================================================
  * NODE ORCHESTRATOR - Configuration
  * ============================================================
+ * 100% FREE & OPEN SOURCE - NO LIMITS
  * Gestion centralisée de la configuration
  */
 
 import dotenv from 'dotenv';
 import path from 'path';
-import { BlockchainType, NodeMode, PricingPlan, SubscriptionPlan } from '../types';
+import { BlockchainType, NodeMode } from '../types';
 
 // Charger les variables d'environnement
 dotenv.config();
 
 // ============================================================
-// CONFIGURATION GÉNÉRALE
+// CONFIGURATION GÉNÉRALE (100% GRATUIT - AUCUNE LIMITE)
 // ============================================================
 
 export const config = {
@@ -24,7 +25,7 @@ export const config = {
   // Serveur
   server: {
     port: parseInt(process.env.PORT || '3001'),
-    host: process.env.HOST || '0.0.0.0',
+    host: process.env.HOST || '127.0.0.1',
   },
   
   // Sécurité - CRITICAL: These MUST be set in production
@@ -63,25 +64,13 @@ export const config = {
     networkName: 'node-orchestrator-network',
   },
   
-  // Limites
-  limits: {
-    maxNodesFree: parseInt(process.env.MAX_NODES_FREE || '3'),
-    maxNodesPremium: process.env.MAX_NODES_PREMIUM === 'unlimited' ? Infinity : parseInt(process.env.MAX_NODES_PREMIUM || '100'),
-  },
-  
-  // Paiements
-  payments: {
-    btcAddress: process.env.PAYMENT_BTC_ADDRESS || '',
-    ethAddress: process.env.PAYMENT_ETH_ADDRESS || '',
-    usdcContract: process.env.PAYMENT_USDC_CONTRACT || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-  },
-  
-  // APIs externes
+  // APIs externes (optionnel)
   external: {
     infuraProjectId: process.env.INFURA_PROJECT_ID || '',
     alchemyApiKey: process.env.ALCHEMY_API_KEY || '',
   },
 };
+
 
 // ============================================================
 // CONFIGURATION DES BLOCKCHAINS
@@ -232,70 +221,6 @@ export const BLOCKCHAIN_CONFIGS: Record<BlockchainType, BlockchainConfig> = {
       getSyncStatus: 'eth_syncing',
       getPeers: 'net_peerCount',
     },
-  },
-};
-
-// ============================================================
-// CONFIGURATION DES PRIX
-// ============================================================
-
-export const PRICING_PLANS: Record<SubscriptionPlan, PricingPlan> = {
-  free: {
-    plan: 'free',
-    priceUSD: 0,
-    maxNodes: 3,
-    features: [
-      'Jusqu\'à 3 nodes locaux',
-      'Dashboard basique',
-      'Wallets HD',
-      'Support communauté',
-    ],
-    cloudHosting: false,
-    support: 'community',
-  },
-  basic: {
-    plan: 'basic',
-    priceUSD: 9.99,
-    maxNodes: 10,
-    features: [
-      'Jusqu\'à 10 nodes locaux',
-      'Dashboard avancé',
-      'Wallets HD illimités',
-      'Support email',
-      'Alertes personnalisées',
-    ],
-    cloudHosting: false,
-    support: 'email',
-  },
-  premium: {
-    plan: 'premium',
-    priceUSD: 29.99,
-    maxNodes: 50,
-    features: [
-      'Jusqu\'à 50 nodes',
-      'Cloud hosting inclus',
-      'API accès complet',
-      'Support prioritaire',
-      'Plugins premium',
-      'Multi-instances',
-    ],
-    cloudHosting: true,
-    support: 'priority',
-  },
-  enterprise: {
-    plan: 'enterprise',
-    priceUSD: 99.99,
-    maxNodes: Infinity,
-    features: [
-      'Nodes illimités',
-      'Cloud dédié',
-      'SLA garanti',
-      'Support 24/7',
-      'Personnalisation',
-      'Formation incluse',
-    ],
-    cloudHosting: true,
-    support: 'priority',
   },
 };
 

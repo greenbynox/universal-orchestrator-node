@@ -196,22 +196,61 @@ universal-orchestrator-node/
 
 ## 🔐 Sécurité
 
-### Chiffrement des Seeds
+### ✅ Garantie 100% Gratuit
+
+> **Ce code source a été audité et nettoyé de toute logique commerciale.**
+> 
+> - ❌ Aucun plan "premium" ou "enterprise"
+> - ❌ Aucune limite sur le nombre de nodes
+> - ❌ Aucune API de paiement (Stripe, etc.)
+> - ❌ Aucune télémétrie ou tracking
+> - ✅ Toutes les fonctionnalités sont disponibles pour tous
+> 
+> Le code est open source et peut être audité par n'importe qui.
+
+### 🐳 Sécurité Docker
+
+Node Orchestrator utilise le socket Docker pour gérer les containers de nodes blockchain. Pour garantir la sécurité :
+
+- **Whitelist d'images stricte** : Seules les images Docker officielles des blockchains sont autorisées. Voir `src/core/security.ts` pour la liste complète (50+ images vérifiées).
+- **Validation avant exécution** : Chaque image est validée contre la whitelist avant d'être lancée.
+- **Containers sandboxés** : Chaque node tourne dans son propre container isolé avec :
+  - `CapDrop: ['ALL']` - Suppression de toutes les capabilities Linux
+  - `SecurityOpt: ['no-new-privileges']` - Empêche l'escalade de privilèges
+  - Limites mémoire et CPU configurées
+
+### 🛡️ Protection des Entrées
+
+- **Sanitization** : Tous les noms de nodes et paramètres sont nettoyés pour prévenir les injections
+- **Validation stricte** : Types de blockchain, modes, ports sont validés
+- **Path traversal protection** : Les chemins de fichiers sont sécurisés contre les attaques `../`
+
+### 🔒 Chiffrement des Seeds
 - **Algorithme**: AES-256-GCM (Galois/Counter Mode)
 - **Dérivation de clé**: PBKDF2 avec 100,000 itérations + SHA-512
 - **Salt**: 32 bytes aléatoires par wallet
 - **IV**: 16 bytes aléatoires par chiffrement
 
-### Protection API
+### 🛡️ Protection API
 - Rate limiting (100 req/min sur endpoints sensibles)
 - Input sanitization (XSS/injection protection)
 - Security headers (X-Frame-Options, X-XSS-Protection, etc.)
 - Validation des mots de passe (8-256 caractères)
 
-### Stockage Local
+### 📦 Stockage Local
 - Seeds chiffrées jamais stockées en clair
 - Données dans `%APPDATA%/node-orchestrator/data/`
 - Aucune donnée envoyée à des serveurs externes
+
+### 📋 Vérifications Système (Anti-Crash)
+
+Avant de lancer un node, le système vérifie automatiquement :
+- **Espace disque** : Suffisant pour la blockchain + 20GB de marge
+- **Mémoire RAM** : Compatible avec les besoins du node
+- **Charge CPU** : Pas de surcharge qui bloquerait le démarrage
+- **Docker** : Disponible et fonctionnel
+
+Si les ressources sont insuffisantes, un message d'erreur explicite est affiché.
 
 ---
 

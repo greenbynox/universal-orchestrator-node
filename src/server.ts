@@ -14,10 +14,9 @@ import path from 'path';
 
 import { config } from './config';
 import { logger } from './utils/logger';
-import { nodesRouter, walletsRouter, paymentsRouter, systemRouter } from './api';
+import { nodesRouter, walletsRouter, systemRouter } from './api';
 import { WebSocketHandler } from './websocket';
 import { nodeManager } from './core/NodeManager';
-import { paymentManager } from './core/PaymentManager';
 import { requireAuth } from './utils/auth';
 import blockchainsRouter from './routes/blockchains';
 
@@ -95,7 +94,6 @@ app.use('/api/blockchains', blockchainsRouter);
 // Protected routes (authentication required)
 app.use('/api/nodes', requireAuth, nodesRouter);
 app.use('/api/wallets', requireAuth, walletsRouter);
-app.use('/api/payments', requireAuth, paymentsRouter);
 
 // Route de base
 app.get('/api', (_req: Request, res: Response) => {
@@ -105,9 +103,8 @@ app.get('/api', (_req: Request, res: Response) => {
     status: 'running',
     authenticated: false,
     endpoints: {
-      nodes: '/api/nodes (auth required)',
-      wallets: '/api/wallets (auth required)',
-      payments: '/api/payments (auth required)',
+      nodes: '/api/nodes',
+      wallets: '/api/wallets',
       system: '/api/system',
       blockchains: '/api/blockchains',
     },
@@ -203,7 +200,6 @@ async function shutdown(signal: string): Promise<void> {
   try {
     // Arrêter les managers
     await nodeManager.shutdown();
-    paymentManager.shutdown();
     
     // Fermer le serveur HTTP
     httpServer.close(() => {
