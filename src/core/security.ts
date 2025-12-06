@@ -9,6 +9,8 @@
  * ============================================================
  */
 
+import fs from 'fs';
+import path from 'path';
 import { logger } from '../utils/logger';
 import { BLOCKCHAIN_CONFIGS } from '../config';
 import { BlockchainType, NodeMode } from '../types';
@@ -161,6 +163,18 @@ export const DOCKER_IMAGE_PATTERNS: RegExp[] = [
 export function isImageAllowed(image: string): boolean {
   // Normaliser l'image (lowercase, trim)
   const normalizedImage = image.toLowerCase().trim();
+
+  // Rejeter immédiatement les caractères dangereux ou espaces
+  if (!normalizedImage || /\s/.test(normalizedImage) || /["'`$]/.test(normalizedImage)) {
+    logger.warn('Image Docker invalide (caractères interdits)', { image });
+    return false;
+  }
+
+  // Exiger un tag explicite pour éviter les pulls implicites
+  if (!normalizedImage.includes(':')) {
+    logger.warn('Image Docker sans tag rejetée', { image });
+    return false;
+  }
   
   // Vérifier la whitelist exacte
   if (DOCKER_IMAGE_WHITELIST.has(normalizedImage)) {
@@ -175,10 +189,9 @@ export function isImageAllowed(image: string): boolean {
   }
 
   // Vérifier les registries whitelistees
-  for (const prefix of DOCKER_REGISTRY_WHITELIST) {
-    if (normalizedImage.startsWith(prefix)) {
-      return true;
-    }
+  const registryAllowed = DOCKER_REGISTRY_WHITELIST.some(prefix => normalizedImage.startsWith(prefix));
+  if (registryAllowed) {
+    return true;
   }
   
   logger.warn('Image Docker non autorisée tentée', { image, normalizedImage });
@@ -236,6 +249,18 @@ export function getValidatedDockerImage(blockchain: BlockchainType, mode: NodeMo
  * Prévient les injections shell/SQL/path traversal
  */
 const DANGEROUS_CHARS = /[;&|`$(){}[\]<>\\'"!#%^*\n\r\t\x00-\x1f]/g;
+
+// Ports système ou réservés à éviter
+const RESERVED_PORTS = new Set([
+  22, // SSH
+  25, 465, 587, // SMTP
+  53, // DNS
+  80, 443, // HTTP/HTTPS
+  3000, 3001, // App interne
+  3306, 5432, // Bases SQL
+  6379, // Redis
+  27017, // Mongo
+]);
 
 /**
  * Pattern pour les noms valides (alphanumeric, tirets, underscores)
@@ -305,7 +330,26 @@ export function sanitizeNodeName(name: string): string {
  * @throws Error si le chemin est invalide ou tente un path traversal
  */
 export function sanitizePath(filePath: string, basePath: string): string {
+  if (!basePath) {
+    throw new Error('Chemin de base manquant');
+  }
+
+  const normalizedBase = path.resolve(basePath);
+  if (normalizedBase === path.parse(normalizedBase).root) {
+    throw new Error('Chemin de base non sécurisé (root)');
+  }
+
+  try {
+    fs.accessSync(normalizedBase, fs.constants.R_OK);
+  } catch (error) {
+    logger.error('Accès refusé au chemin de base', { basePath: normalizedBase, error });
+    throw new Error('Permissions insuffisantes sur le chemin de base');
+  }
+
   const sanitized = sanitizeInput(filePath);
+  if (!sanitized) {
+    throw new Error('Chemin de fichier vide ou invalide');
+  }
   
   // Vérifier les tentatives de path traversal
   if (sanitized.includes('..') || sanitized.includes('//')) {
@@ -319,10 +363,10 @@ export function sanitizePath(filePath: string, basePath: string): string {
   }
   
   // S'assurer que le chemin reste dans le basePath
-  const path = require('path');
-  const resolvedPath = path.resolve(basePath, sanitized);
-  const resolvedBase = path.resolve(basePath);
-  
+  const resolvedPath = path.resolve(normalizedBase, sanitized);
+  const resolvedBase = fs.realpathSync(normalizedBase);
+  const resolvedTargetDir = path.resolve(resolvedPath, '..');
+
   if (!resolvedPath.startsWith(resolvedBase)) {
     logger.warn('Tentative d\'accès hors du dossier autorisé', { 
       filePath, 
@@ -330,6 +374,14 @@ export function sanitizePath(filePath: string, basePath: string): string {
       resolvedPath 
     });
     throw new Error('Accès au chemin non autorisé');
+  }
+
+  // Vérifier que le dossier cible est accessible en lecture/écriture
+  try {
+    fs.accessSync(resolvedTargetDir, fs.constants.R_OK | fs.constants.W_OK);
+  } catch (error) {
+    logger.warn('Permissions insuffisantes sur le dossier cible', { resolvedTargetDir });
+    throw new Error('Permissions insuffisantes sur le dossier cible');
   }
   
   return resolvedPath;
@@ -350,8 +402,7 @@ export function validatePort(port: number): number {
   }
   
   // Ports réservés à éviter
-  const reservedPorts = [3000, 3001, 5432, 27017, 6379]; // App, DB ports
-  if (reservedPorts.includes(portNum)) {
+  if (RESERVED_PORTS.has(portNum)) {
     throw new Error(`Port ${portNum} réservé par le système`);
   }
   
@@ -377,7 +428,9 @@ export function validateHost(host: string): string {
   if (ipv4Pattern.test(sanitized)) {
     // Valider les octets IPv4
     const octets = sanitized.split('.').map(Number);
-    if (octets.every(o => o >= 0 && o <= 255)) {
+    const isValidRange = octets.every(o => o >= 0 && o <= 255);
+    const isReserved = sanitized === '0.0.0.0' || sanitized === '255.255.255.255';
+    if (isValidRange && !isReserved) {
       return sanitized;
     }
   }

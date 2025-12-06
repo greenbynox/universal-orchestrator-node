@@ -1,8 +1,8 @@
 id: "bitcoin-core-full"
 blockchain: "bitcoin"
 mode: "full"
-name: "Bitcoin Core"
-category: "L1"
+name: "Bitcoin Core (P2P+RPC)"
+category: "fullnode-l1"
 docker:
   image: "kylemanna/bitcoind:latest"
   ports:
