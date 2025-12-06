@@ -31,7 +31,7 @@ import {
   sanitizeNodeName,
   auditLog 
 } from './security';
-import { performSystemCheck } from './systemCheck';
+import { checkDiskSpaceAndRAM, performSystemCheck } from './systemCheck';
 
 // ============================================================
 // NODE MANAGER CLASS
@@ -244,6 +244,22 @@ export class NodeManager extends EventEmitter {
 
     const nodeLogger = getNodeLogger(nodeId);
     const blockchainConfig = BLOCKCHAIN_CONFIGS[nodeConfig.blockchain];
+    const requirements = blockchainConfig.requirements[nodeConfig.mode];
+
+    // Vérification rapide disque/RAM avant de poursuivre
+    try {
+      await checkDiskSpaceAndRAM(requirements.diskGB, requirements.memoryGB);
+    } catch (error) {
+      const message = (error as Error).message || 'Ressources insuffisantes pour démarrer le node';
+      nodeLogger.error(message);
+      auditLog('NODE_START_BLOCKED', {
+        nodeId,
+        blockchain: nodeConfig.blockchain,
+        mode: nodeConfig.mode,
+        reason: message,
+      });
+      throw new Error(message);
+    }
 
     // SÉCURITÉ: Vérifier les ressources système avant le démarrage
     nodeLogger.info('Vérification des ressources système...');

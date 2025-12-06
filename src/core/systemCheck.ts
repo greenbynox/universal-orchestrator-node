@@ -167,6 +167,38 @@ async function checkMemory(requiredGB: number): Promise<CheckDetail> {
 }
 
 /**
+ * Vérification rapide disque + RAM avant lancement d'un node
+ * Lève une erreur explicite si une ressource est insuffisante
+ */
+export async function checkDiskSpaceAndRAM(requiredDiskGB: number, requiredRAMGB: number): Promise<boolean> {
+  const [diskCheck, memoryCheck] = await Promise.all([
+    checkDiskSpace(requiredDiskGB),
+    checkMemory(requiredRAMGB),
+  ]);
+
+  const errors: string[] = [];
+
+  if (!diskCheck.passed) {
+    errors.push(diskCheck.message);
+  }
+
+  if (!memoryCheck.passed) {
+    errors.push(memoryCheck.message);
+  }
+
+  if (errors.length > 0) {
+    logger.warn('checkDiskSpaceAndRAM failed', {
+      requiredDiskGB,
+      requiredRAMGB,
+      errors,
+    });
+    throw new Error(errors.join(' | '));
+  }
+
+  return true;
+}
+
+/**
  * Vérifie la charge CPU actuelle
  */
 async function checkCPU(): Promise<CheckDetail> {
@@ -415,6 +447,7 @@ export function estimateSyncTime(
 
 export default {
   performSystemCheck,
+  checkDiskSpaceAndRAM,
   canLaunchNode,
   getNodeRequirements,
   estimateSyncTime,

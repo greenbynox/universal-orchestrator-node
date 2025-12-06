@@ -105,6 +105,21 @@ npm run dev
 
 ---
 
+## ⚡ Quick Start
+
+1. **Installer Docker** : [Docker Desktop](https://docs.docker.com/get-docker/) puis démarrez-le.
+2. **Installer les dépendances** :
+  ```bash
+  npm install
+  cd frontend && npm install && cd ..
+  ```
+3. **Lancer en dev complet (Electron + API + React)** :
+  ```bash
+  npm run start:dev
+  ```
+
+---
+
 ## 📋 Prérequis
 
 | Composant | Minimum | Recommandé |

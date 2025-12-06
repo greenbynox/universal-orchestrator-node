@@ -11,7 +11,8 @@ import { nodeManager } from '../core/NodeManager';
 import { BlockchainType, NodeMode, CreateNodeRequest, ApiResponse } from '../types';
 import { logger } from '../utils/logger';
 import { recommendNodeMode, getSystemResources, getAllRecommendations } from '../utils/system';
-import { sanitizeInput, validateNodeId } from '../utils/validation';
+import { sanitizeInput as secureSanitizeInput, validateCreateNodeRequest } from '../core/security';
+import { validateNodeId, parsePositiveInt } from '../utils/validation';
 
 const router: RouterType = Router();
 
@@ -91,7 +92,7 @@ router.get('/counts', async (_req: Request, res: Response) => {
 // ============================================================
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const nodeId = sanitizeInput(req.params.id);
+    const nodeId = secureSanitizeInput(req.params.id);
     if (!validateNodeId(nodeId)) {
       return res.status(400).json({
         success: false,
@@ -131,32 +132,26 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, blockchain, mode, customConfig } = req.body as CreateNodeRequest;
     
-    // Sanitize inputs
-    const sanitizedName = name ? sanitizeInput(name, 100) : undefined;
-    
-    // Validation
-    if (!blockchain) {
+    // Sanitization & validation (sécurité renforcée)
+    try {
+      validateCreateNodeRequest({
+        name: name ? secureSanitizeInput(name) : undefined,
+        blockchain: secureSanitizeInput(blockchain as string),
+        mode: mode ? secureSanitizeInput(mode as string) : undefined,
+      });
+    } catch (validationError) {
       return res.status(400).json({
         success: false,
-        error: 'Blockchain requise',
+        error: (validationError as Error).message,
         timestamp: new Date(),
       });
     }
-    
-    const validBlockchains: BlockchainType[] = ['bitcoin', 'ethereum', 'solana', 'monero', 'bnb'];
-    if (!validBlockchains.includes(blockchain)) {
-      return res.status(400).json({
-        success: false,
-        error: `Blockchain invalide. Valeurs acceptées: ${validBlockchains.join(', ')}`,
-        timestamp: new Date(),
-      });
-    }
-    
+
     // Créer le node
     const node = await nodeManager.createNode({
-      name: sanitizedName,
-      blockchain,
-      mode: mode as NodeMode,
+      name: name ? secureSanitizeInput(name) : undefined,
+      blockchain: secureSanitizeInput(blockchain as string) as BlockchainType,
+      mode: mode ? (secureSanitizeInput(mode as string) as NodeMode) : undefined,
       customConfig,
     });
     
@@ -181,7 +176,16 @@ router.post('/', async (req: Request, res: Response) => {
 // ============================================================
 router.post('/:id/start', async (req: Request, res: Response) => {
   try {
-    await nodeManager.startNode(req.params.id);
+    const nodeId = secureSanitizeInput(req.params.id);
+    if (!validateNodeId(nodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de node invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    await nodeManager.startNode(nodeId);
     
     res.json({
       success: true,
@@ -190,9 +194,11 @@ router.post('/:id/start', async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error(`Erreur démarrage node ${req.params.id}`, { error });
-    res.status(500).json({
+    const message = (error as Error).message;
+    const status = /ressources insuffisantes/i.test(message) ? 400 : 500;
+    res.status(status).json({
       success: false,
-      error: (error as Error).message,
+      error: message,
       timestamp: new Date(),
     });
   }
@@ -203,7 +209,16 @@ router.post('/:id/start', async (req: Request, res: Response) => {
 // ============================================================
 router.post('/:id/stop', async (req: Request, res: Response) => {
   try {
-    await nodeManager.stopNode(req.params.id);
+    const nodeId = secureSanitizeInput(req.params.id);
+    if (!validateNodeId(nodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de node invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    await nodeManager.stopNode(nodeId);
     
     res.json({
       success: true,
@@ -225,7 +240,16 @@ router.post('/:id/stop', async (req: Request, res: Response) => {
 // ============================================================
 router.post('/:id/restart', async (req: Request, res: Response) => {
   try {
-    await nodeManager.restartNode(req.params.id);
+    const nodeId = secureSanitizeInput(req.params.id);
+    if (!validateNodeId(nodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de node invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    await nodeManager.restartNode(nodeId);
     
     res.json({
       success: true,
@@ -246,7 +270,16 @@ router.post('/:id/restart', async (req: Request, res: Response) => {
 // ============================================================
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    await nodeManager.deleteNode(req.params.id);
+    const nodeId = secureSanitizeInput(req.params.id);
+    if (!validateNodeId(nodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de node invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    await nodeManager.deleteNode(nodeId);
     
     res.json({
       success: true,
@@ -267,8 +300,17 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // ============================================================
 router.get('/:id/logs', async (req: Request, res: Response) => {
   try {
-    const lines = parseInt(req.query.lines as string) || 100;
-    const logs = await nodeManager.getNodeLogs(req.params.id, lines);
+    const nodeId = secureSanitizeInput(req.params.id);
+    if (!validateNodeId(nodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de node invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    const lines = parsePositiveInt(req.query.lines, 100) || 100;
+    const logs = await nodeManager.getNodeLogs(nodeId, lines);
     
     res.json({
       success: true,
@@ -289,7 +331,16 @@ router.get('/:id/logs', async (req: Request, res: Response) => {
 // ============================================================
 router.get('/:id/recommend-mode', async (req: Request, res: Response) => {
   try {
-    const node = nodeManager.getNode(req.params.id);
+    const nodeId = secureSanitizeInput(req.params.id);
+    if (!validateNodeId(nodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de node invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    const node = nodeManager.getNode(nodeId);
     if (!node) {
       return res.status(404).json({
         success: false,
