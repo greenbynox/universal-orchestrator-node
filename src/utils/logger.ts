@@ -16,7 +16,58 @@ if (!fs.existsSync(config.paths.logs)) {
 }
 
 // Format personnalisé pour les logs
+const SENSITIVE_KEYS = ['password', 'secret', 'token', 'key', 'mnemonic', 'seed', 'passphrase', 'private'];
+const IPV4_REGEX = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g;
+const HEX_REGEX = /\b[0-9a-fA-F]{32,}\b/g;
+
+const redactString = (value: string): string => {
+  return value
+    .replace(IPV4_REGEX, '[REDACTED_IP]')
+    .replace(HEX_REGEX, '[REDACTED]');
+};
+
+const redactValue = (value: unknown): unknown => {
+  if (typeof value === 'string') {
+    return redactString(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(redactValue);
+  }
+  if (value && typeof value === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      const lowerKey = key.toLowerCase();
+      if (SENSITIVE_KEYS.some(s => lowerKey.includes(s))) {
+        result[key] = '[REDACTED]';
+      } else {
+        result[key] = redactValue(val);
+      }
+    }
+    return result;
+  }
+  return value;
+};
+
+const redactionFormat = winston.format((info) => {
+  const scrubbed = { ...info } as winston.Logform.TransformableInfo;
+  scrubbed.message = redactString(String(info.message ?? ''));
+
+  const meta = { ...info } as Record<string, unknown>;
+  delete meta.level;
+  delete meta.message;
+  delete meta.timestamp;
+  delete meta.nodeId;
+
+  for (const [key, value] of Object.entries(meta)) {
+    scrubbed[key] = redactValue(value);
+  }
+
+  return scrubbed;
+});
+
+// Format personnalisé pour les logs
 const customFormat = winston.format.combine(
+  redactionFormat(),
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
   winston.format.printf((info) => {
@@ -29,6 +80,7 @@ const customFormat = winston.format.combine(
 
 // Format coloré pour la console
 const consoleFormat = winston.format.combine(
+  redactionFormat(),
   winston.format.colorize(),
   winston.format.timestamp({ format: 'HH:mm:ss' }),
   winston.format.printf((info) => {

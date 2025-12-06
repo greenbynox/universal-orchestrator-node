@@ -6,7 +6,9 @@
   "asar": true,
   "asarUnpack": [
     "electron/**/*",
-    "node_modules/electron-squirrel-startup/**/*"
+    "node_modules/electron-squirrel-startup/**/*",
+    "src/templates/**/*",
+    "prisma/**/*"
   ],
   "npmRebuild": false,
   "buildDependenciesFromSource": false,
