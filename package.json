@@ -28,7 +28,9 @@
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
-    "generate:icons": "node scripts/generate-icons.js"
+    "generate:icons": "node scripts/generate-icons.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init"
   },
   "keywords": [
     "blockchain",
@@ -47,6 +49,8 @@
   "dependencies": {
     "@solana/web3.js": "^1.98.4",
     "axios": "^1.6.2",
+    "js-yaml": "^4.1.0",
+    "@prisma/client": "^5.8.1",
     "bip32": "^5.0.0",
     "bip39": "^3.1.0",
     "bitcoinjs-lib": "^6.1.5",
@@ -95,6 +99,7 @@
     "ts-jest": "^29.4.6",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3",
+    "prisma": "^5.8.1",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "eslint": "^8.55.0"
