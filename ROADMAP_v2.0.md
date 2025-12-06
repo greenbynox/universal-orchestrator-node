@@ -14,7 +14,6 @@
 ## 🎯 OBJECTIFS v2.0 : L'ÈRE DE L'INTELLIGENCE
 
 ### 1. 🤖 **AI-Ops : L'Assistant d'Infrastructure**
-*Remplace l'idée de "Trading AI" par une IA utile pour la maintenance.*
 
 - **Maintenance Prédictive** : L'IA analyse les logs et l'usage disque pour prédire les pannes avant qu'elles n'arrivent.
 - **Auto-Pruning Intelligent** : Détection automatique de la saturation disque et lancement des procédures de nettoyage (pruning) sans intervention humaine.
