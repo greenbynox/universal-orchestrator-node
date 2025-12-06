@@ -4,8 +4,6 @@ import type {
   WalletInfo, 
   SystemResources, 
   NodeModeRecommendation,
-  PricingPlan,
-  Payment,
   BlockchainType,
   NodeMode,
 } from '../types';
@@ -166,50 +164,7 @@ export const walletsApi = {
 };
 
 // ============================================================
-// PAYMENTS API
-// ============================================================
-
-export const paymentsApi = {
-  // Obtenir les plans disponibles
-  getPlans: async (): Promise<PricingPlan[]> => {
-    const { data } = await api.get('/payments/plans');
-    return data.data;
-  },
-
-  // Créer un paiement
-  create: async (params: {
-    userId: string;
-    plan: string;
-    currency: string;
-  }): Promise<Payment> => {
-    const { data } = await api.post('/payments', params);
-    return data.data;
-  },
-
-  // Obtenir un paiement par ID
-  getById: async (id: string): Promise<Payment> => {
-    const { data } = await api.get(`/payments/${id}`);
-    return data.data;
-  },
-
-  // Obtenir l'abonnement d'un utilisateur
-  getSubscription: async (userId: string): Promise<{
-    subscription: any;
-    limits: { maxNodes: number; cloudHosting: boolean };
-    hasPremiumAccess: boolean;
-  }> => {
-    const { data } = await api.get(`/payments/subscription/${userId}`);
-    return data.data;
-  },
-
-  // Simuler une confirmation (dev only)
-  simulate: async (id: string): Promise<void> => {
-    await api.post(`/payments/${id}/simulate`);
-  },
-};
-
-// ============================================================
-// SYSTEM API
+// SYSTEM API (100% FREE - No payments needed)
 // ============================================================
 
 export const systemApi = {

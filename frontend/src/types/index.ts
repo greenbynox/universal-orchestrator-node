@@ -15,8 +15,9 @@ export type BlockchainType = MajorBlockchainType | string;
 
 export type NodeMode = 'full' | 'pruned' | 'light';
 export type NodeStatus = 'stopped' | 'starting' | 'syncing' | 'ready' | 'error' | 'stopping';
-export type PaymentCurrency = 'BTC' | 'ETH' | 'USDC' | 'SOL' | 'BNB' | 'XMR';
-export type SubscriptionPlan = 'free'; // Tout est gratuit!
+
+// 100% GRATUIT - Aucune limite sur le nombre de nodes
+// Pas de plans d'abonnement, pas de paiements
 
 export interface NodeConfig {
   id: string;
@@ -98,29 +99,7 @@ export interface NodeModeRecommendation {
   };
 }
 
-export interface Payment {
-  id: string;
-  userId: string;
-  amount: number;
-  currency: PaymentCurrency;
-  amountUSD: number;
-  status: 'pending' | 'confirmed' | 'failed' | 'expired';
-  txHash?: string;
-  toAddress: string;
-  plan: SubscriptionPlan;
-  createdAt: string;
-  expiresAt: string;
-  confirmedAt?: string;
-}
-
-export interface PricingPlan {
-  plan: SubscriptionPlan;
-  priceUSD: number;
-  maxNodes: number;
-  features: string[];
-  cloudHosting: boolean;
-  support: 'community' | 'email' | 'priority';
-}
+// 100% FREE - No payment interfaces needed
 
 export interface BlockchainInfoLegacy {
   name: BlockchainType;
