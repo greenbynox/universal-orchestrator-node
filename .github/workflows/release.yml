@@ -148,13 +148,23 @@ jobs:
         with:
           draft: true
           files: |
-            dist-artifacts/**/*.exe
-            dist-artifacts/**/*.blockmap
-            dist-artifacts/**/*.AppImage
-            dist-artifacts/**/*.deb
-            dist-artifacts/**/*.tar.gz
-            dist-artifacts/**/*.dmg
-            dist-artifacts/**/*.zip
+            dist-artifacts/windows-artifacts/*.exe
+            dist-artifacts/windows-artifacts/*.blockmap
+            dist-artifacts/windows-artifacts/*.txt
+            dist-artifacts/linux-x64-artifacts/*.AppImage
+            dist-artifacts/linux-x64-artifacts/*.deb
+            dist-artifacts/linux-x64-artifacts/*.tar.gz
+            dist-artifacts/linux-x64-artifacts/*.txt
+            dist-artifacts/linux-arm64-artifacts/*.AppImage
+            dist-artifacts/linux-arm64-artifacts/*.deb
+            dist-artifacts/linux-arm64-artifacts/*.tar.gz
+            dist-artifacts/linux-arm64-artifacts/*.txt
+            dist-artifacts/macos-x64-artifacts/*.dmg
+            dist-artifacts/macos-x64-artifacts/*.zip
+            dist-artifacts/macos-x64-artifacts/*.txt
+            dist-artifacts/macos-arm64-artifacts/*.dmg
+            dist-artifacts/macos-arm64-artifacts/*.zip
+            dist-artifacts/macos-arm64-artifacts/*.txt
             dist-artifacts/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
