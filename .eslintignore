@@ -1,0 +1,8 @@
+node_modules/
+dist/
+release/
+frontend/node_modules/
+frontend/dist/
+electron/
+data/
+coverage/
