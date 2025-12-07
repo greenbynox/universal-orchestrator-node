@@ -139,16 +139,47 @@ export default function WalletsPage() {
   };
 
   const connectHardware = async (kind: 'ledger' | 'trezor') => {
-    setHardwareStatus(`Connexion au hardware wallet ${kind}...`);
+    setHardwareStatus(`Connecting to ${kind} hardware wallet...`);
     setHardwareAddress(null);
     try {
-      // Placeholder: in a full implementation this would call backend endpoints that bridge to the hardware device.
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const demoAddress = `${kind}-address-demo-1`; 
-      setHardwareAddress(demoAddress);
-      setHardwareStatus(`Connecté à ${kind.toUpperCase()}`);
+      // Call real backend endpoint
+      const endpoint = kind === 'ledger' ? '/api/wallets/hardware/ledger/connect' : '/api/wallets/hardware/trezor/connect';
+      const response = await fetch(endpoint, {
+        method: kind === 'trezor' ? 'POST' : 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to connect to ${kind}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Now get an address from the connected device
+      const addressEndpoint = kind === 'ledger' 
+        ? '/api/wallets/hardware/ledger/address' 
+        : '/api/wallets/hardware/trezor/address';
+      
+      const addressResponse = await fetch(addressEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          blockchain: 'bitcoin',
+          derivationPath: "m/44'/0'/0'/0/0", // BIP44 Bitcoin mainnet path
+        }),
+      });
+
+      if (!addressResponse.ok) {
+        throw new Error(`Failed to get address from ${kind}: ${addressResponse.statusText}`);
+      }
+
+      const addressData = await addressResponse.json();
+      setHardwareAddress(addressData.address);
+      setHardwareStatus(`Connected to ${kind.toUpperCase()}`);
     } catch (error) {
-      setHardwareStatus((error as Error).message);
+      const errorMessage = (error as Error).message;
+      setHardwareStatus(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -320,11 +351,11 @@ export default function WalletsPage() {
                     </div>
                   </div>
 
-                  {/* Balance placeholder */}
+                  {/* Balance - fetched from blockchain */}
                   <div className="bg-dark-900 rounded-lg p-3 mb-4">
                     <p className="text-xs text-dark-400 mb-1">Solde</p>
                     <p className="text-lg font-semibold text-white">
-                      {wallet.balance || '0.00'} {bcInfo.symbol}
+                      {wallet.balance || 'Chargement...'} {bcInfo.symbol}
                     </p>
                   </div>
 
