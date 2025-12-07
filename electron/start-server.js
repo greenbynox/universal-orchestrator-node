@@ -285,7 +285,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     name: 'Node Orchestrator API',
-    version: '1.0.3',
+    version: '2.2.0',
     blockchains: 205,
     endpoints: ['/api/health', '/api/system/info', '/api/blockchains', '/api/nodes', '/api/wallets']
   });
