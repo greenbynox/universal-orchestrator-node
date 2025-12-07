@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 interface CreateNodeModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultBlockchain?: BlockchainType;
+  defaultMode?: NodeMode;
 }
 
 // Default blockchains (fallback)
@@ -19,10 +21,10 @@ const modes: { value: NodeMode; label: string; description: string }[] = [
   { value: 'light', label: 'Light', description: 'Mode léger, synchronisation rapide' },
 ];
 
-export default function CreateNodeModal({ isOpen, onClose }: CreateNodeModalProps) {
+export default function CreateNodeModal({ isOpen, onClose, defaultBlockchain = 'bitcoin', defaultMode = 'pruned' }: CreateNodeModalProps) {
   const [name, setName] = useState('');
-  const [blockchain, setBlockchain] = useState<BlockchainType>('bitcoin');
-  const [mode, setMode] = useState<NodeMode>('pruned');
+  const [blockchain, setBlockchain] = useState<BlockchainType>(defaultBlockchain);
+  const [mode, setMode] = useState<NodeMode>(defaultMode);
   const [isLoading, setIsLoading] = useState(false);
   const [blockchains, setBlockchains] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +40,13 @@ export default function CreateNodeModal({ isOpen, onClose }: CreateNodeModalProp
       }).catch(console.error);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setBlockchain(defaultBlockchain);
+      setMode(defaultMode);
+    }
+  }, [defaultBlockchain, defaultMode, isOpen]);
 
   // Filter blockchains by search
   const filteredBlockchains = blockchains.length > 0 

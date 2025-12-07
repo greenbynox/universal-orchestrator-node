@@ -205,6 +205,58 @@ export interface WebSocketEvent<T = unknown> {
 }
 
 // ============================================================
+// ALERTS & NOTIFICATIONS
+// ============================================================
+
+// ============================================================
+// ALERTS & NOTIFICATIONS
+// ============================================================
+
+export type AlertType =
+  | 'NODE_DOWN'
+  | 'DISK_FULL'
+  | 'MEMORY_CRITICAL'
+  | 'SYNC_DELAYED'
+  | 'CPU_HIGH'
+  | 'PRUNING_FAILED'
+  | 'CUSTOM';
+
+export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
+
+export interface Alert {
+  id: string;
+  type: AlertType;
+  severity: AlertSeverity;
+  nodeId?: string;
+  message: string;
+  timestamp: Date;
+  resolved: boolean;
+  resolvedAt?: Date;
+  metadata?: Record<string, unknown>;
+}
+
+export interface WebhookConfig {
+  id: string;
+  url: string;
+  events: AlertType[];
+  enabled: boolean;
+  secret?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  lastError?: string | null;
+}
+
+// ============================================================
+// HARDWARE WALLETS
+// ============================================================
+
+export interface HardwareWalletService {
+  connect(): Promise<void>;
+  getAddress(blockchain: string, derivationPath: string): Promise<string>;
+  disconnect(): Promise<void>;
+}
+
+// ============================================================
 // PLUGIN SYSTEM
 // ============================================================
 

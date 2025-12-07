@@ -57,6 +57,12 @@
 - **Bénéfice** : Zéro crash, observabilité complète, données persistantes
 - **Status** : ✅ Prisma generated & migrated (v20251206182219)
 
+#### 4. **AI-Ops & Alerting** 🛰️
+- Prisma `Alert` + `Webhook` models, AlertManager (EventEmitter)
+- HealthCheckService (CPU/RAM/disk/node down/sync delay) + auto-pruning hook
+- Notifications Discord/Telegram/webhook, tableau de bord `/api/dashboard/stats`
+- Frontend Dashboard/Alerts pages (Recharts + polling 5s) et modal d'estimation des ressources
+
 ---
 
 ## ✨ Fonctionnalités v2.0
