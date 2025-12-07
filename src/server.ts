@@ -95,11 +95,11 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // Public routes (no auth required)
 app.use('/api/system', systemRouter);
 app.use('/api/blockchains', blockchainsRouter);
+app.use('/api/wallets/hardware', walletsHardwareRouter); // Hardware wallets are public for connection
 
 // Protected routes (authentication required)
 app.use('/api/nodes', requireAuth, nodesRouter);
 app.use('/api/wallets', requireAuth, walletsRouter);
-app.use('/api/wallets/hardware', requireAuth, walletsHardwareRouter);
 app.use('/api/dashboard', requireAuth, dashboardRouter);
 app.use('/api/alerts', requireAuth, alertsRouter);
 

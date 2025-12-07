@@ -278,22 +278,15 @@ export default function WalletsPage() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-dark-800 rounded-xl p-12 border border-dark-700 text-center"
+          className="text-center py-12"
         >
-          <WalletIcon className="w-16 h-16 text-dark-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">
+          <WalletIcon className="w-16 h-16 text-dark-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-white mb-2">
             Aucun wallet créé
           </h3>
           <p className="text-dark-400 mb-6">
-            Créez votre premier wallet HD parmi {COMPLETE_BLOCKCHAIN_LIST.length} blockchains
+            Créez votre premier wallet HD parmi {COMPLETE_BLOCKCHAIN_LIST.length} blockchains en cliquant sur "Nouveau Wallet" ci-dessus
           </p>
-          <button
-            onClick={() => setShowTypeModal(true)}
-            className="btn-primary inline-flex"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Créer un Wallet
-          </button>
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
