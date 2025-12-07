@@ -45,21 +45,70 @@ export class TrezorWalletService implements HardwareWalletService {
   async getAddress(blockchain: SupportedChain, derivationPath: string): Promise<string> {
     this.ensureConnected();
     if (!this.trezor) throw new Error('Trezor non connecté');
+    logger.info(`Deriving address from Trezor for ${blockchain} on ${derivationPath}`);
 
-    switch (blockchain) {
-      case 'bitcoin': {
-        const result = await this.trezor.getAddress({ path: derivationPath, coin: 'btc' });
-        if (!result.success) throw new Error(result.payload?.error || 'Erreur Trezor');
-        return result.payload.address;
+    try {
+      switch (blockchain) {
+        case 'bitcoin': {
+          const result = await this.trezor.getAddress({ path: derivationPath, coin: 'btc' });
+          if (!result.success) throw new Error(result.payload?.error || 'Erreur Trezor');
+          logger.info(`Address derived from Trezor for bitcoin: ${result.payload.address.substring(0, 10)}...`);
+          return result.payload.address;
+        }
+        case 'ethereum': {
+          const result = await this.trezor.ethereumGetAddress({ path: derivationPath });
+          if (!result.success) throw new Error(result.payload?.error || 'Erreur Trezor');
+          logger.info(`Address derived from Trezor for ethereum: ${result.payload.address.substring(0, 10)}...`);
+          return result.payload.address;
+        }
+        case 'solana': {
+          const result = await this.trezor.solanaGetAddress({ path: derivationPath });
+          if (!result.success) throw new Error(result.payload?.error || 'Erreur Trezor');
+          logger.info(`Address derived from Trezor for solana: ${result.payload.address.substring(0, 10)}...`);
+          return result.payload.address;
+        }
+        case 'cosmos': {
+          const result = await this.trezor.cosmosGetAddress({ path: derivationPath });
+          if (!result.success) throw new Error(result.payload?.error || 'Erreur Trezor');
+          logger.info(`Address derived from Trezor for cosmos: ${result.payload.address.substring(0, 10)}...`);
+          return result.payload.address;
+        }
+        default:
+          throw new Error(`Blockchain ${blockchain} not supported by Trezor`);
       }
-      case 'ethereum': {
-        const result = await this.trezor.ethereumGetAddress({ path: derivationPath });
-        if (!result.success) throw new Error(result.payload?.error || 'Erreur Trezor');
-        return result.payload.address;
+    } catch (error) {
+      logger.error(`Failed to derive address from Trezor`, error);
+      throw new Error(`Cannot derive address from Trezor: ${(error as Error).message}`);
+    }
+  }
+
+  async signTransaction(tx: unknown): Promise<string> {
+    this.ensureConnected();
+    if (!this.trezor) throw new Error('Trezor non connecté');
+    logger.info('Signing transaction with Trezor...');
+
+    try {
+      // Serialize the transaction
+      const txData = typeof tx === 'string' ? tx : JSON.stringify(tx);
+      
+      // Call Trezor sign method
+      const result = await this.trezor.signTransaction({
+        inputs: (tx as any).inputs,
+        outputs: (tx as any).outputs,
+        coin: (tx as any).coin || 'btc',
+      });
+
+      if (!result.success) {
+        throw new Error(result.payload?.error || 'Erreur de signature Trezor');
       }
-      default:
-        logger.warn(`getAddress not fully implemented for ${blockchain}, returning placeholder`);
-        return `trezor-${blockchain}-${derivationPath}`;
+
+      const signature = result.payload.serialized || result.payload.signature;
+      logger.info(`Transaction signed by Trezor: ${typeof signature === 'string' ? signature.substring(0, 16) : 'binary'}...`);
+      
+      return typeof signature === 'string' ? signature : Buffer.from(signature).toString('hex');
+    } catch (error) {
+      logger.error('Failed to sign transaction with Trezor', error);
+      throw new Error(`Cannot sign with Trezor: ${(error as Error).message}`);
     }
   }
 }

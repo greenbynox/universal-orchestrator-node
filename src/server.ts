@@ -21,6 +21,7 @@ import { requireAuth } from './utils/auth';
 import blockchainsRouter from './routes/blockchains';
 import dashboardRouter from './routes/dashboard';
 import alertsRouter from './routes/alerts';
+import walletsHardwareRouter from './routes/wallets';
 import './services/notifications';
 import { pruningService } from './services/pruning/PruningService';
 
@@ -98,6 +99,7 @@ app.use('/api/blockchains', blockchainsRouter);
 // Protected routes (authentication required)
 app.use('/api/nodes', requireAuth, nodesRouter);
 app.use('/api/wallets', requireAuth, walletsRouter);
+app.use('/api/wallets/hardware', requireAuth, walletsHardwareRouter);
 app.use('/api/dashboard', requireAuth, dashboardRouter);
 app.use('/api/alerts', requireAuth, alertsRouter);
 
