@@ -170,6 +170,63 @@ router.get('/categories', (_req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/blockchains/:id/modes
+ * Retourne les modes de synchronisation supportés pour une blockchain
+ */
+router.get('/:id/modes', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const chain = blockchainRegistry.get(id);
+
+    if (!chain) {
+      return res.status(404).json({
+        success: false,
+        error: `Blockchain '${id}' not found`,
+      });
+    }
+
+    // Get supported modes from docker config
+    const supportedModes = chain.docker?.images ? Object.keys(chain.docker.images) : ['full', 'pruned', 'light'];
+    
+    // Map to include requirements for each mode
+    const modes = supportedModes.map((mode: any) => {
+      const requirements = chain.docker?.requirements?.[mode as any] || {
+        diskGB: 500,
+        memoryGB: 8,
+        syncDays: 7,
+      };
+
+      return {
+        id: mode,
+        name: mode.charAt(0).toUpperCase() + mode.slice(1),
+        supported: true,
+        requirements: {
+          diskGB: requirements.diskGB,
+          memoryGB: requirements.memoryGB,
+          cpuCores: requirements.cpuCores || 2,
+          syncDays: requirements.syncDays,
+        },
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        chainId: chain.id,
+        chainName: chain.name,
+        modes: modes,
+      },
+    });
+  } catch (error) {
+    logger.error('Error fetching blockchain modes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch blockchain modes',
+    });
+  }
+});
+
+/**
  * GET /api/blockchains/:id
  * Retourne une blockchain spécifique
  */

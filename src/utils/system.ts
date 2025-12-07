@@ -23,51 +23,67 @@ export async function getSystemResources(): Promise<SystemResources> {
   try {
     console.log('[getSystemResources] ========== STARTING ==========');
     
+    // Helper function with timeout
+    const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number = 5000): Promise<T> => {
+      return Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+        )
+      ]);
+    };
+    
     let cpu, mem, disk;
     try {
-      console.log('[getSystemResources] Calling si.cpu()...');
-      cpu = await si.cpu();
+      console.log('[getSystemResources] Calling si.cpu() with 5s timeout...');
+      cpu = await withTimeout(si.cpu(), 5000);
       console.log('[getSystemResources] si.cpu() returned successfully. Type:', typeof cpu, 'Keys:', cpu ? Object.keys(cpu) : 'NULL');
     } catch (cpuErr) {
       console.error('[getSystemResources] Error getting CPU:', cpuErr);
-      throw cpuErr;
+      // Fallback to defaults if si.cpu() fails
+      console.warn('[getSystemResources] Using fallback CPU values');
+      cpu = { cores: os.cpus().length, model: os.cpus()[0]?.model || 'Unknown CPU' };
     }
 
     try {
-      console.log('[getSystemResources] Calling si.mem()...');
-      mem = await si.mem();
+      console.log('[getSystemResources] Calling si.mem() with 5s timeout...');
+      mem = await withTimeout(si.mem(), 5000);
       console.log('[getSystemResources] si.mem() returned successfully. Type:', typeof mem, 'Keys:', mem ? Object.keys(mem) : 'NULL');
     } catch (memErr) {
       console.error('[getSystemResources] Error getting memory:', memErr);
-      throw memErr;
+      // Fallback to defaults if si.mem() fails
+      console.warn('[getSystemResources] Using fallback memory values');
+      mem = { total: os.totalmem(), free: os.freemem(), available: os.freemem() };
     }
 
     try {
-      console.log('[getSystemResources] Calling si.fsSize()...');
-      disk = await si.fsSize();
+      console.log('[getSystemResources] Calling si.fsSize() with 5s timeout...');
+      disk = await withTimeout(si.fsSize(), 5000);
       console.log('[getSystemResources] si.fsSize() returned successfully. Type:', typeof disk, 'IsArray:', Array.isArray(disk), 'Length:', disk ? disk.length : 'N/A');
     } catch (diskErr) {
       console.error('[getSystemResources] Error getting disk:', diskErr);
-      throw diskErr;
+      // Fallback to empty array if si.fsSize() fails
+      console.warn('[getSystemResources] Using fallback disk values');
+      disk = [{ size: 1000000000000, used: 500000000000 }]; // 1TB total, 500GB used
     }
 
     // Vérifier que on a bien les propriétés attendues
     console.log('[getSystemResources] Validating CPU data: cpu.cores=' + (cpu ? cpu.cores : 'undefined'));
     if (!cpu || typeof cpu.cores === 'undefined') {
       console.error('[getSystemResources] Invalid CPU data - missing cores property. CPU object:', JSON.stringify(cpu));
-      throw new Error('Invalid CPU data from systeminformation - missing cores property');
+      throw new Error('Invalid CPU data - missing cores property');
     }
     
     console.log('[getSystemResources] Validating memory data: mem.total=' + (mem ? mem.total : 'undefined'));
     if (!mem || typeof mem.total === 'undefined') {
       console.error('[getSystemResources] Invalid memory data - missing total property. Memory object:', JSON.stringify(mem));
-      throw new Error('Invalid memory data from systeminformation - missing total property');
+      throw new Error('Invalid memory data - missing total property');
     }
     
     console.log('[getSystemResources] Validating disk data: Array.isArray=' + Array.isArray(disk) + ', length=' + (disk ? disk.length : 'N/A'));
     if (!Array.isArray(disk) || disk.length === 0) {
       console.error('[getSystemResources] Invalid disk data - not an array or empty. Disk:', JSON.stringify(disk));
-      throw new Error('Invalid disk data from systeminformation - not an array or empty');
+      throw new Error('Invalid disk data - not an array or empty');
     }
 
     // Calculer l'espace disque total disponible
