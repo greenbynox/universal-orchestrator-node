@@ -6,7 +6,8 @@ import { useStore } from '../store';
 import toast from 'react-hot-toast';
 import type { BlockchainType, NodeMode, SystemResources, BLOCKCHAIN_NAMES } from '../types';
 
-const REQUIREMENTS: Record<string, Record<NodeMode, { disk: number; memory: number; cpu: number; syncTime: string }>> = {
+// Default requirements for blockchains - will be overridden by API data
+const DEFAULT_REQUIREMENTS: Record<string, Record<NodeMode, { disk: number; memory: number; cpu: number; syncTime: string }>> = {
   bitcoin: {
     full: { disk: 600, memory: 4, cpu: 1, syncTime: '~7 days' },
     pruned: { disk: 50, memory: 2, cpu: 1, syncTime: '~2 days' },
@@ -17,13 +18,25 @@ const REQUIREMENTS: Record<string, Record<NodeMode, { disk: number; memory: numb
     pruned: { disk: 200, memory: 4, cpu: 2, syncTime: '~2 days' },
     light: { disk: 10, memory: 2, cpu: 1, syncTime: 'hours' },
   },
+  // Default fallback for all other blockchains
+  default: {
+    full: { disk: 500, memory: 8, cpu: 2, syncTime: '~7 days' },
+    pruned: { disk: 100, memory: 4, cpu: 2, syncTime: '~3 days' },
+    light: { disk: 10, memory: 2, cpu: 1, syncTime: 'hours' },
+  }
 };
 
-const modes: { value: NodeMode; label: string; description: string }[] = [
-  { value: 'full', label: 'Full Node', description: 'Blockchain complète, plus d\'espace requis' },
-  { value: 'pruned', label: 'Pruned', description: 'Blockchain élaguée, moins d\'espace' },
-  { value: 'light', label: 'Light', description: 'Mode léger, synchronisation rapide' },
-];
+interface BlockchainMode {
+  id: NodeMode;
+  name: string;
+  supported: boolean;
+  requirements?: {
+    diskGB: number;
+    memoryGB: number;
+    cpuCores?: number;
+    syncDays: number;
+  };
+}
 
 interface Props {
   isOpen: boolean;
@@ -41,6 +54,8 @@ export default function ResourceEstimateModal({ isOpen, onClose }: Props) {
   const [isCreating, setIsCreating] = useState(false);
   const [blockchains, setBlockchains] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [availableModes, setAvailableModes] = useState<BlockchainMode[]>([]);
+  const [modesLoading, setModesLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -67,6 +82,10 @@ export default function ResourceEstimateModal({ isOpen, onClose }: Props) {
           const chains = await systemApi.getBlockchains();
           if (chains && chains.length > 0) {
             setBlockchains(chains);
+            // Auto-select first blockchain if available
+            if (chains.length > 0) {
+              setBlockchain(chains[0].id as BlockchainType);
+            }
           }
         } catch (err) {
           console.error('Error loading blockchains:', err);
@@ -85,7 +104,101 @@ export default function ResourceEstimateModal({ isOpen, onClose }: Props) {
     }
   }, [isOpen]);
 
-  const req = REQUIREMENTS[blockchain]?.[mode];
+  // Load available modes for selected blockchain
+  useEffect(() => {
+    if (blockchain) {
+      setModesLoading(true);
+      const fetchModes = async () => {
+        try {
+          // Try to fetch modes from API
+          const response = await fetch(`/api/blockchains/${blockchain}/modes`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data?.modes) {
+              setAvailableModes(result.data.modes);
+              // Set first available mode as default
+              if (result.data.modes.length > 0) {
+                setMode(result.data.modes[0].id as NodeMode);
+              }
+            } else {
+              // Fallback to default modes
+              setAvailableModes(getDefaultModes(blockchain));
+            }
+          } else {
+            // Fallback to default modes if API fails
+            setAvailableModes(getDefaultModes(blockchain));
+          }
+        } catch (err) {
+          console.error('Error loading modes:', err);
+          // Fallback to default modes
+          setAvailableModes(getDefaultModes(blockchain));
+        } finally {
+          setModesLoading(false);
+        }
+      };
+      fetchModes();
+    }
+  }, [blockchain]);
+
+  // Helper function to get default modes for a blockchain
+  const getDefaultModes = (chainId: string): BlockchainMode[] => {
+    const defaultModesList: BlockchainMode[] = [
+      { 
+        id: 'full', 
+        name: 'Full Node', 
+        supported: true,
+        requirements: {
+          diskGB: 500,
+          memoryGB: 8,
+          cpuCores: 2,
+          syncDays: 7
+        }
+      },
+      { 
+        id: 'pruned', 
+        name: 'Pruned', 
+        supported: true,
+        requirements: {
+          diskGB: 100,
+          memoryGB: 4,
+          cpuCores: 2,
+          syncDays: 3
+        }
+      },
+      { 
+        id: 'light', 
+        name: 'Light', 
+        supported: true,
+        requirements: {
+          diskGB: 10,
+          memoryGB: 2,
+          cpuCores: 1,
+          syncDays: 0
+        }
+      }
+    ];
+    return defaultModesList;
+  };
+
+  // Get requirements for current blockchain and mode
+  const getCurrentRequirements = () => {
+    const modeData = availableModes.find(m => m.id === mode);
+    if (modeData?.requirements) {
+      return {
+        disk: modeData.requirements.diskGB,
+        memory: modeData.requirements.memoryGB,
+        cpu: modeData.requirements.cpuCores || 2,
+        syncTime: modeData.requirements.syncDays > 0 
+          ? `~${Math.ceil(modeData.requirements.syncDays)} days`
+          : 'hours'
+      };
+    }
+    // Fallback to defaults
+    const defaults = DEFAULT_REQUIREMENTS[blockchain] || DEFAULT_REQUIREMENTS.default;
+    return defaults[mode];
+  };
+
+  const req = getCurrentRequirements();
   const diskOk = resources && req ? resources.availableDiskGB >= req.disk : true;
   const memOk = resources && req ? resources.availableMemoryGB >= req.memory : true;
   const cpuOk = true;
@@ -188,25 +301,34 @@ export default function ResourceEstimateModal({ isOpen, onClose }: Props) {
                 <div>
                   <label className="text-sm text-dark-400 block mb-2">Mode de synchronisation</label>
                   <div className="space-y-2">
-                    {modes.map((m) => (
-                      <label key={m.value} className="flex items-center p-3 rounded-lg border-2 cursor-pointer transition" style={{
-                        borderColor: mode === m.value ? '#0066cc' : '#2a3f5f',
-                        backgroundColor: mode === m.value ? 'rgba(0, 102, 204, 0.1)' : 'transparent'
-                      }}>
-                        <input 
-                          type="radio" 
-                          name="mode" 
-                          value={m.value}
-                          checked={mode === m.value}
-                          onChange={(e) => setMode(e.target.value as NodeMode)}
-                          className="w-4 h-4"
-                        />
-                        <div className="ml-3">
-                          <p className="text-white font-medium">{m.label}</p>
-                          <p className="text-xs text-dark-400">{m.description}</p>
-                        </div>
-                      </label>
-                    ))}
+                    {modesLoading ? (
+                      <div className="text-dark-400 text-sm">Chargement des modes disponibles...</div>
+                    ) : availableModes.length > 0 ? (
+                      availableModes.map((m) => (
+                        <label key={m.id} className="flex items-center p-3 rounded-lg border-2 cursor-pointer transition" style={{
+                          borderColor: mode === m.id ? '#0066cc' : '#2a3f5f',
+                          backgroundColor: mode === m.id ? 'rgba(0, 102, 204, 0.1)' : 'transparent'
+                        }}>
+                          <input 
+                            type="radio" 
+                            name="mode" 
+                            value={m.id}
+                            checked={mode === m.id}
+                            onChange={(e) => setMode(e.target.value as NodeMode)}
+                            className="w-4 h-4"
+                            disabled={!m.supported}
+                          />
+                          <div className="ml-3">
+                            <p className="text-white font-medium">{m.name}</p>
+                            <p className="text-xs text-dark-400">
+                              {m.requirements ? `${m.requirements.diskGB} GB disk, ${m.requirements.memoryGB} GB RAM` : 'Requirements loading...'}
+                            </p>
+                          </div>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="text-dark-400 text-sm">Aucun mode disponible</div>
+                    )}
                   </div>
                 </div>
 
