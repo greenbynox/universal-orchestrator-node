@@ -26,11 +26,30 @@ jobs:
         run: npx electron-builder --win nsis portable --x64
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Ensure SHA256 file isn't locked
+        run: |
+          if (Test-Path release/SHA256SUMS-windows.txt) {
+            Remove-Item release/SHA256SUMS-windows.txt -Force -ErrorAction SilentlyContinue
+          }
       - name: Generate SHA256
         run: |
-          Get-ChildItem release -File | ForEach-Object {
-            (Get-FileHash $_.FullName -Algorithm SHA256).Hash + "  " + $_.Name
-          } | Out-File -Encoding ascii release/SHA256SUMS-windows.txt
+          $retries = 5
+          for ($i=0; $i -lt $retries; $i++) {
+            try {
+              Get-ChildItem release -File | ForEach-Object {
+                (Get-FileHash $_.FullName -Algorithm SHA256).Hash + "  " + $_.Name
+              } | Out-File -Encoding ascii release/SHA256SUMS-windows.txt
+              Write-Host "SHA256 generated successfully"
+              break
+            } catch {
+              if ($i -lt $retries - 1) {
+                Write-Host "Attempt $($i+1) failed, retrying in 2 seconds..."
+                Start-Sleep -Seconds 2
+              } else {
+                throw $_
+              }
+            }
+          }
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
