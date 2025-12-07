@@ -1,6 +1,6 @@
 /**
  * Types partagés avec le backend
- * Node Orchestrator v1.0.3 - 205 blockchains supportées
+ * Node Orchestrator v2.2.0 - 205 blockchains supportées
  */
 
 // BlockchainType étendu pour supporter 205+ blockchains

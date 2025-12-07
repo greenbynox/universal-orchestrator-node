@@ -2,7 +2,7 @@
 
 > **Philosophie :** Passer d'un simple lanceur de nœuds à une véritable Centrale d'Infrastructure Autonome et Intelligente.
 
-## 📌 État Actuel - v1.0.3 (Stable)
+## 📌 État Actuel - v2.2.0 (Production Ready)
 - [x] **Orchestration Docker** sécurisée et isolée
 - [x] **205 blockchains** supportées (Full/Pruned/Light)
 - [x] **Wallets HD** avec chiffrement AES-256-GCM

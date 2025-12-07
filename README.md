@@ -1,4 +1,4 @@
-# 🚀 Node Orchestrator v2.0
+# 🚀 Node Orchestrator v2.2.0
 
 <div align="center">
 
@@ -23,7 +23,7 @@
 
 ---
 
-## ✨ Version 2.0 – Révolution Architecturale
+## ✨ Version 2.2.0 – AI-Ops, Sécurité & Observabilité
 
 ### 🎯 Trois Piliers Fondamentaux
 
@@ -33,7 +33,7 @@
 | Ajouter une blockchain = 10x plus facile | `sanitizeInput` systématique + AES-256 | Zero-crash avec health checks |
 | Réutilisable & extensible | Containers sandboxés + validation stricte | Observabilité complète |
 
-### 🔧 Quoi de Neuf en v2.0
+### 🔧 Quoi de Neuf en v2.2.0
 
 #### 1. **Architecture Modulaire (YAML Config-as-Code)** 📝
 - Chaque blockchain est définie dans `src/templates/*.yaml` (Bitcoin, Ethereum, Solana, etc.)
@@ -65,7 +65,7 @@
 
 ---
 
-## ✨ Fonctionnalités v2.0
+## ✨ Fonctionnalités v2.2.0
 
 ### 🔗 205+ Blockchains Supportées
 
@@ -115,10 +115,10 @@
 
 ### Windows (Recommandé)
 
-> **[📥 Télécharger Node Orchestrator v2.0.0 (Windows)](https://github.com/greenbynox/universal-orchestrator-node/releases)**
+> **[📥 Télécharger Node Orchestrator v2.2.0 (Windows)](https://github.com/greenbynox/universal-orchestrator-node/releases)**
 
 - `Node Orchestrator-2.0.0-Setup.exe` - Installateur Windows
-- `Node Orchestrator-2.0.0-Portable.exe` - Version portable (aucune installation)
+- `Node Orchestrator-2.2.0-Portable.exe` - Version portable (aucune installation)
 
 ### Depuis les sources
 
@@ -210,7 +210,7 @@ npm run start:dev
 
 ---
 
-## 🏗️ Architecture v2.0
+## 🏗️ Architecture v2.2.0
 
 ```
 universal-orchestrator-node/
@@ -257,7 +257,7 @@ universal-orchestrator-node/
 
 ---
 
-## 🔐 Sécurité v2.0
+## 🔐 Sécurité v2.2.0
 
 ### ✅ Garantie 100% Gratuit & Audité
 
@@ -340,13 +340,13 @@ npm run typecheck
 npm run lint
 ```
 
-**Status v2.0** : ✅ 83/83 tests passing | ✅ 0 type errors | ✅ Prisma migrated
+**Status v2.2.0** : ✅ All tests passing | ✅ 0 type errors | ✅ Prisma migrated
 
 ---
 
-## 📝 Roadmap v2.0
+## 📝 Roadmap v2.2.0
 
-Voir [ROADMAP_v2.0.md](ROADMAP_v2.0.md) pour le plan détaillé.
+Voir [ROADMAP_v2.2.0.md](ROADMAP_v2.2.0.md) pour le plan détaillé.
 
 ### Prochaines fonctionnalités :
 - 🤖 Assistant IA intégré (détection anomalies, maintenance prédictive)
@@ -417,7 +417,7 @@ Ce projet est sous licence **MIT** - voir le fichier [LICENSE](LICENSE) pour plu
 
 🌐 Décentralisation pour tous 🌐
 
-<sub>v2.0.0 - Architecture Data-Driven & Sécurité Renforcée</sub>
+<sub>v2.2.0 - AI-Ops, Hardware Wallets & Dashboard Cockpit</sub>
 <sub>Décembre 2025</sub>
 
 </div>

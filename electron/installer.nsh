@@ -2,7 +2,7 @@
 ; Version 1.0.3 - Offline Installer
 
 !macro customHeader
-  !system "echo 'Building Node Orchestrator v1.0.3 Installer...'"
+  !system "echo 'Building Node Orchestrator v2.2.0 Installer...'"
 !macroend
 
 !macro preInit

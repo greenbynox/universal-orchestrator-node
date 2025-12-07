@@ -105,7 +105,7 @@ app.use('/api/alerts', requireAuth, alertsRouter);
 app.get('/api', (_req: Request, res: Response) => {
   res.json({
     name: 'Node Orchestrator API',
-    version: '1.0.3',
+    version: '2.2.0',
     status: 'running',
     authenticated: false,
     endpoints: {
