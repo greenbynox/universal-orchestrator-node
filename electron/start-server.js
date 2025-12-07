@@ -396,42 +396,39 @@ function getRealCpuUsage() {
 }
 
 app.get('/api/system/resources', async (req, res) => {
-  const cpus = os.cpus();
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const usedMem = totalMem - freeMem;
-  
-  // Get real disk space
-  const disk = await getRealDiskSpace();
-  const diskTotalGB = Math.round(disk.total / (1024 * 1024 * 1024) * 10) / 10;
-  const diskFreeGB = Math.round(disk.free / (1024 * 1024 * 1024) * 10) / 10;
-  const diskUsedGB = Math.round((disk.total - disk.free) / (1024 * 1024 * 1024) * 10) / 10;
-  
-  // Get real CPU usage
-  const cpuUsage = getRealCpuUsage();
-  
-  res.json({
-    success: true,
-    data: {
-      cpu: {
-        cores: cpus.length,
-        model: cpus[0]?.model || 'Unknown',
-        usage: cpuUsage
-      },
-      memory: {
-        totalGB: Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10,
-        usedGB: Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10,
-        freeGB: Math.round(freeMem / (1024 * 1024 * 1024) * 10) / 10
-      },
-      disk: {
-        totalGB: diskTotalGB || 500,
-        usedGB: diskUsedGB || 300,
-        freeGB: diskFreeGB || 200
-      },
-      platform: os.platform(),
-      arch: os.arch()
-    }
-  });
+  try {
+    const cpus = os.cpus();
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    
+    // Get real disk space
+    const disk = await getRealDiskSpace();
+    const totalDisk = disk.total;
+    const freeDisk = disk.free;
+    
+    // Get real CPU usage
+    const cpuUsage = getRealCpuUsage();
+    
+    // Transform to match SystemResources interface
+    res.json({
+      success: true,
+      data: {
+        cpuCores: cpus.length,
+        cpuModel: cpus[0]?.model || 'Unknown',
+        totalMemoryGB: Math.round(totalMem / (1024 * 1024 * 1024) * 100) / 100,
+        availableMemoryGB: Math.round(freeMem / (1024 * 1024 * 1024) * 100) / 100,
+        totalDiskGB: Math.round(totalDisk / (1024 * 1024 * 1024) * 100) / 100,
+        availableDiskGB: Math.round(freeDisk / (1024 * 1024 * 1024) * 100) / 100,
+        platform: os.platform(),
+        arch: os.arch()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error fetching system resources'
+    });
+  }
 });
 
 // ============================================================

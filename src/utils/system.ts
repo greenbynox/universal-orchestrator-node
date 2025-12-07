@@ -21,20 +21,66 @@ import { logger } from './logger';
  */
 export async function getSystemResources(): Promise<SystemResources> {
   try {
-    const [cpu, mem, disk] = await Promise.all([
-      si.cpu(),
-      si.mem(),
-      si.fsSize(),
-    ]);
+    console.log('[getSystemResources] ========== STARTING ==========');
+    
+    let cpu, mem, disk;
+    try {
+      console.log('[getSystemResources] Calling si.cpu()...');
+      cpu = await si.cpu();
+      console.log('[getSystemResources] si.cpu() returned successfully. Type:', typeof cpu, 'Keys:', cpu ? Object.keys(cpu) : 'NULL');
+    } catch (cpuErr) {
+      console.error('[getSystemResources] Error getting CPU:', cpuErr);
+      throw cpuErr;
+    }
+
+    try {
+      console.log('[getSystemResources] Calling si.mem()...');
+      mem = await si.mem();
+      console.log('[getSystemResources] si.mem() returned successfully. Type:', typeof mem, 'Keys:', mem ? Object.keys(mem) : 'NULL');
+    } catch (memErr) {
+      console.error('[getSystemResources] Error getting memory:', memErr);
+      throw memErr;
+    }
+
+    try {
+      console.log('[getSystemResources] Calling si.fsSize()...');
+      disk = await si.fsSize();
+      console.log('[getSystemResources] si.fsSize() returned successfully. Type:', typeof disk, 'IsArray:', Array.isArray(disk), 'Length:', disk ? disk.length : 'N/A');
+    } catch (diskErr) {
+      console.error('[getSystemResources] Error getting disk:', diskErr);
+      throw diskErr;
+    }
+
+    // Vérifier que on a bien les propriétés attendues
+    console.log('[getSystemResources] Validating CPU data: cpu.cores=' + (cpu ? cpu.cores : 'undefined'));
+    if (!cpu || typeof cpu.cores === 'undefined') {
+      console.error('[getSystemResources] Invalid CPU data - missing cores property. CPU object:', JSON.stringify(cpu));
+      throw new Error('Invalid CPU data from systeminformation - missing cores property');
+    }
+    
+    console.log('[getSystemResources] Validating memory data: mem.total=' + (mem ? mem.total : 'undefined'));
+    if (!mem || typeof mem.total === 'undefined') {
+      console.error('[getSystemResources] Invalid memory data - missing total property. Memory object:', JSON.stringify(mem));
+      throw new Error('Invalid memory data from systeminformation - missing total property');
+    }
+    
+    console.log('[getSystemResources] Validating disk data: Array.isArray=' + Array.isArray(disk) + ', length=' + (disk ? disk.length : 'N/A'));
+    if (!Array.isArray(disk) || disk.length === 0) {
+      console.error('[getSystemResources] Invalid disk data - not an array or empty. Disk:', JSON.stringify(disk));
+      throw new Error('Invalid disk data from systeminformation - not an array or empty');
+    }
 
     // Calculer l'espace disque total disponible
+    console.log('[getSystemResources] Computing disk values...');
     const totalDisk = disk.reduce((acc, d) => acc + d.size, 0);
     const usedDisk = disk.reduce((acc, d) => acc + d.used, 0);
     const availableDisk = totalDisk - usedDisk;
+    console.log('[getSystemResources] Disk values computed: totalDisk=' + totalDisk + ' bytes, availableDisk=' + availableDisk + ' bytes');
 
-    return {
-      cpuCores: cpu.cores,
-      cpuModel: `${cpu.manufacturer} ${cpu.brand}`,
+    console.log('[getSystemResources] Creating result object...');
+    const result: SystemResources = {
+      cpuCores: cpu.cores || 999, // DEFAULT FOR DEBUGGING
+      cpuModel: `${cpu.manufacturer || 'UNK'} ${cpu.brand || 'UNK'} [TRANSFORMED]`,
       totalMemoryGB: Math.round(mem.total / (1024 * 1024 * 1024) * 100) / 100,
       availableMemoryGB: Math.round(mem.available / (1024 * 1024 * 1024) * 100) / 100,
       totalDiskGB: Math.round(totalDisk / (1024 * 1024 * 1024) * 100) / 100,
@@ -42,7 +88,13 @@ export async function getSystemResources(): Promise<SystemResources> {
       platform: os.platform() as 'windows' | 'darwin' | 'linux',
       arch: os.arch(),
     };
+
+    console.log('[getSystemResources] Result object keys:', Object.keys(result));
+    console.log('[getSystemResources] Result object:', JSON.stringify(result));
+    console.log('[getSystemResources] ========== ABOUT TO RETURN ==========');
+    return result;
   } catch (error) {
+    console.error('[getSystemResources] FATAL ERROR:', error);
     logger.error('Erreur lors de la détection des ressources système', { error });
     throw error;
   }

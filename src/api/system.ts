@@ -19,11 +19,27 @@ router.get('/resources', async (_req: Request, res: Response) => {
   try {
     console.log('[API] /system/resources - Starting fetch');
     const resources = await getSystemResources();
-    console.log('[API] /system/resources - Resources fetched:', resources);
+    console.log('[API] /system/resources - Resources fetched:', JSON.stringify(resources));
+    console.log('[API] /system/resources - Resources type:', typeof resources);
+    console.log('[API] /system/resources - Resources keys:', Object.keys(resources));
+    console.log('[API] /system/resources - cpuCores:', resources.cpuCores);
+    console.log('[API] /system/resources - availableDiskGB:', resources.availableDiskGB);
+    
+    // Ensure we're returning the correct structure
+    const responseData = {
+      cpuCores: resources.cpuCores,
+      cpuModel: resources.cpuModel,
+      totalMemoryGB: resources.totalMemoryGB,
+      availableMemoryGB: resources.availableMemoryGB,
+      totalDiskGB: resources.totalDiskGB,
+      availableDiskGB: resources.availableDiskGB,
+      platform: resources.platform,
+      arch: resources.arch,
+    };
     
     res.json({
       success: true,
-      data: resources,
+      data: responseData,
       timestamp: new Date(),
     });
   } catch (error) {

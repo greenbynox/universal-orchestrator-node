@@ -21,7 +21,14 @@ const api = axios.create({
 
 // Intercepteur pour les erreurs
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('[API Interceptor] Response received:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data,
+    });
+    return response;
+  },
   (error) => {
     const message = error.response?.data?.error || error.message || 'Une erreur est survenue';
     console.error('API Error:', message);
@@ -170,8 +177,14 @@ export const walletsApi = {
 export const systemApi = {
   // Obtenir les ressources système
   getResources: async (): Promise<SystemResources> => {
-    const { data } = await api.get('/system/resources');
-    return data.data;
+    console.log('[systemApi.getResources] Calling API...');
+    const response = await api.get('/system/resources');
+    console.log('[systemApi.getResources] Raw API response:', response);
+    console.log('[systemApi.getResources] response.data:', response.data);
+    console.log('[systemApi.getResources] response.data.data:', response.data.data);
+    const result = response.data.data;
+    console.log('[systemApi.getResources] Returning:', result);
+    return result;
   },
 
   // Obtenir les métriques en temps réel
