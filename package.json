@@ -71,6 +71,10 @@
     "winston": "^3.11.0",
     "ws": "^8.14.2"
   },
+  "optionalDependencies": {
+    "@ledgerhq/hw-transport-node-hid": "^6.28.2",
+    "@trezor/connect": "^9.2.1"
+  },
   "devDependencies": {
     "@types/bip32": "^1.0.2",
     "@types/bitcoinjs-lib": "^4.0.1",

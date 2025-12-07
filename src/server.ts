@@ -19,6 +19,10 @@ import { WebSocketHandler } from './websocket';
 import { nodeManager } from './core/NodeManager';
 import { requireAuth } from './utils/auth';
 import blockchainsRouter from './routes/blockchains';
+import dashboardRouter from './routes/dashboard';
+import alertsRouter from './routes/alerts';
+import './services/notifications';
+import { pruningService } from './services/pruning/PruningService';
 
 // ============================================================
 // EXPRESS APP SETUP
@@ -94,6 +98,8 @@ app.use('/api/blockchains', blockchainsRouter);
 // Protected routes (authentication required)
 app.use('/api/nodes', requireAuth, nodesRouter);
 app.use('/api/wallets', requireAuth, walletsRouter);
+app.use('/api/dashboard', requireAuth, dashboardRouter);
+app.use('/api/alerts', requireAuth, alertsRouter);
 
 // Route de base
 app.get('/api', (_req: Request, res: Response) => {
@@ -188,6 +194,9 @@ httpServer.listen(config.server.port, config.server.host, () => {
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
   `);
+
+  // Start background services
+  pruningService.start();
 });
 
 // ============================================================

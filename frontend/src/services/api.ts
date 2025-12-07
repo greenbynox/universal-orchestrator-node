@@ -171,18 +171,7 @@ export const systemApi = {
   // Obtenir les ressources système
   getResources: async (): Promise<SystemResources> => {
     const { data } = await api.get('/system/resources');
-    const raw = data.data;
-    // Transform API format to frontend format
-    return {
-      cpuCores: raw.cpu?.cores || 0,
-      cpuModel: raw.cpu?.model || 'Unknown',
-      totalMemoryGB: raw.memory?.totalGB || 0,
-      availableMemoryGB: raw.memory?.freeGB || 0,
-      totalDiskGB: raw.disk?.totalGB || 0,
-      availableDiskGB: raw.disk?.freeGB || 0,
-      platform: raw.platform || 'windows',
-      arch: raw.arch || 'x64',
-    };
+    return data.data;
   },
 
   // Obtenir les métriques en temps réel
@@ -209,6 +198,27 @@ export const systemApi = {
   }> => {
     const { data } = await api.get('/system/health');
     return data.data;
+  },
+};
+
+// ============================================================
+// DASHBOARD & ALERTS
+// ============================================================
+
+export const dashboardApi = {
+  getStats: async (): Promise<any> => {
+    const { data } = await api.get('/dashboard/stats');
+    return data;
+  },
+};
+
+export const alertsApi = {
+  list: async (params: { limit?: number; offset?: number; resolved?: boolean | null } = {}): Promise<{ total: number; items: any[] }> => {
+    const { data } = await api.get('/alerts', { params });
+    return { total: data.total, items: data.items };
+  },
+  resolve: async (id: string): Promise<void> => {
+    await api.post(`/alerts/${id}/resolve`);
   },
 };
 

@@ -1,10 +1,11 @@
 import { Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
+import DashboardPage from './pages/DashboardPage';
 import NodesPage from './pages/NodesPage';
 import WalletsPage from './pages/WalletsPage';
 import SettingsPage from './pages/SettingsPage';
+import AlertsHistoryPage from './pages/AlertsHistoryPage';
 import { nodesApi, walletsApi, systemApi } from './services/api';
 import { useStore } from './store';
 
@@ -57,10 +58,11 @@ function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<DashboardPage />} />
         <Route path="/nodes" element={<NodesPage />} />
         <Route path="/wallets" element={<WalletsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/alerts" element={<AlertsHistoryPage />} />
       </Routes>
     </Layout>
   );

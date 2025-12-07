@@ -12,6 +12,7 @@ import {
   ShieldCheckIcon,
   LockClosedIcon,
   KeyIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useStore } from '../store';
 import { walletsApi } from '../services/api';
@@ -35,6 +36,9 @@ interface BitcoinAddressType {
 export default function WalletsPage() {
   const { wallets, addWallet, removeWallet } = useStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [hardwareStatus, setHardwareStatus] = useState<string | null>(null);
+  const [hardwareAddress, setHardwareAddress] = useState<string | null>(null);
   const [selectedBlockchain, setSelectedBlockchain] = useState<BlockchainInfo | null>(null);
   const [selectedAddressType, setSelectedAddressType] = useState<BitcoinAddressType | null>(null);
   const [walletName, setWalletName] = useState('');
@@ -134,6 +138,20 @@ export default function WalletsPage() {
     }
   };
 
+  const connectHardware = async (kind: 'ledger' | 'trezor') => {
+    setHardwareStatus(`Connexion au hardware wallet ${kind}...`);
+    setHardwareAddress(null);
+    try {
+      // Placeholder: in a full implementation this would call backend endpoints that bridge to the hardware device.
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const demoAddress = `${kind}-address-demo-1`; 
+      setHardwareAddress(demoAddress);
+      setHardwareStatus(`Connecté à ${kind.toUpperCase()}`);
+    } catch (error) {
+      setHardwareStatus((error as Error).message);
+    }
+  };
+
   const handleDelete = async (walletId: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce wallet ? Cette action est irréversible.')) return;
     
@@ -204,7 +222,7 @@ export default function WalletsPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => setShowTypeModal(true)}
           className="btn-primary"
         >
           <PlusIcon className="w-5 h-5" />
@@ -239,7 +257,7 @@ export default function WalletsPage() {
             Créez votre premier wallet HD parmi {COMPLETE_BLOCKCHAIN_LIST.length} blockchains
           </p>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => setShowTypeModal(true)}
             className="btn-primary inline-flex"
           >
             <PlusIcon className="w-5 h-5" />
@@ -333,6 +351,94 @@ export default function WalletsPage() {
           })}
         </div>
       )}
+
+      {/* Modal de sélection du type de wallet */}
+      <AnimatePresence>
+        {showTypeModal && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/60 z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowTypeModal(false)}
+            />
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            >
+              <div className="bg-dark-800 border border-dark-700 rounded-2xl w-full max-w-lg p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-white">Créer un wallet</h3>
+                  <button onClick={() => setShowTypeModal(false)} className="p-2 rounded-lg hover:bg-dark-700">
+                    <XMarkIcon className="w-5 h-5 text-dark-400" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <button
+                    className="w-full p-4 rounded-xl border-2 border-dark-700 hover:border-primary-500 text-left"
+                    onClick={() => {
+                      setShowTypeModal(false);
+                      setShowCreateModal(true);
+                    }}
+                  >
+                    <div className="font-semibold text-white">Générer une nouvelle Seed (Local)</div>
+                    <p className="text-sm text-dark-400">Seed chiffrée localement avec votre mot de passe.</p>
+                  </button>
+                  <button
+                    className="w-full p-4 rounded-xl border-2 border-dark-700 hover:border-primary-500 text-left"
+                    onClick={() => {
+                      setShowTypeModal(false);
+                      void connectHardware('ledger');
+                    }}
+                  >
+                    <div className="font-semibold text-white">Ledger Hardware Wallet</div>
+                    <p className="text-sm text-dark-400">Connectez votre Ledger et affichez l'adresse.</p>
+                  </button>
+                  <button
+                    className="w-full p-4 rounded-xl border-2 border-dark-700 hover:border-primary-500 text-left"
+                    onClick={() => {
+                      setShowTypeModal(false);
+                      void connectHardware('trezor');
+                    }}
+                  >
+                    <div className="font-semibold text-white">Trezor Hardware Wallet</div>
+                    <p className="text-sm text-dark-400">Connectez votre Trezor et affichez l'adresse.</p>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Modal feedback hardware */}
+      <AnimatePresence>
+        {(hardwareStatus || hardwareAddress) && (
+          <>
+            <motion.div className="fixed inset-0 bg-black/60 z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setHardwareStatus(null); setHardwareAddress(null); }} />
+            <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+              <div className="bg-dark-800 border border-dark-700 rounded-2xl w-full max-w-md p-6 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-white">Hardware Wallet</h3>
+                  <button onClick={() => { setHardwareStatus(null); setHardwareAddress(null); }} className="p-2 hover:bg-dark-700 rounded">
+                    <XMarkIcon className="w-5 h-5 text-dark-400" />
+                  </button>
+                </div>
+                {hardwareStatus && <p className="text-dark-300">{hardwareStatus}</p>}
+                {hardwareAddress && (
+                  <div className="bg-dark-900 border border-dark-700 rounded-lg p-3">
+                    <p className="text-xs text-dark-400 mb-1">Adresse détectée</p>
+                    <p className="text-white font-mono break-all">{hardwareAddress}</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Modal création wallet */}
       <AnimatePresence>

@@ -99,6 +99,30 @@ export interface NodeModeRecommendation {
   };
 }
 
+// Alerts & Webhooks
+export type AlertType =
+  | 'NODE_DOWN'
+  | 'DISK_FULL'
+  | 'MEMORY_CRITICAL'
+  | 'SYNC_DELAYED'
+  | 'CPU_HIGH'
+  | 'PRUNING_FAILED'
+  | 'CUSTOM';
+
+export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
+
+export interface Alert {
+  id: string;
+  type: AlertType;
+  severity: AlertSeverity;
+  nodeId?: string;
+  message: string;
+  timestamp: string;
+  resolved: boolean;
+  resolvedAt?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
 // 100% FREE - No payment interfaces needed
 
 export interface BlockchainInfoLegacy {

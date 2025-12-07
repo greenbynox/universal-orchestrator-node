@@ -33,6 +33,7 @@ import {
 } from './security';
 import { checkDiskSpaceAndRAM, performSystemCheck } from './systemCheck';
 import templateManager, { NodeTemplate } from './TemplateManager';
+import HealthCheckService from '../services/alerts/HealthCheckService';
 
 // ============================================================
 // NODE MANAGER CLASS
@@ -45,6 +46,7 @@ export class NodeManager extends EventEmitter {
   private nodeMetrics: Map<string, NodeMetrics> = new Map();
   private metricsInterval?: NodeJS.Timeout;
   private syncCheckInterval?: NodeJS.Timeout;
+  private healthCheckService: HealthCheckService;
   
   constructor() {
     super();
@@ -62,6 +64,10 @@ export class NodeManager extends EventEmitter {
     
     // Démarrer la collecte des métriques
     this.startMetricsCollection();
+
+    // Démarrer les health checks
+    this.healthCheckService = new HealthCheckService(this);
+    this.healthCheckService.start();
     
     logger.info('NodeManager initialisé');
   }
@@ -867,6 +873,10 @@ export class NodeManager extends EventEmitter {
     }
     if (this.syncCheckInterval) {
       clearInterval(this.syncCheckInterval);
+    }
+
+    if (this.healthCheckService) {
+      this.healthCheckService.stop();
     }
 
     // Arrêter tous les nodes

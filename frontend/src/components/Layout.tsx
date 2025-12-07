@@ -19,6 +19,7 @@ interface LayoutProps {
 const navItems = [
   { path: '/', icon: HomeIcon, label: 'Dashboard' },
   { path: '/nodes', icon: ServerStackIcon, label: 'Nodes' },
+  { path: '/alerts', icon: SignalIcon, label: 'Alertes' },
   { path: '/wallets', icon: WalletIcon, label: 'Wallets' },
   { path: '/settings', icon: Cog6ToothIcon, label: 'Paramètres' },
 ];
