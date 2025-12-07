@@ -3,16 +3,12 @@ import { motion } from 'framer-motion';
 import { PlusIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import { useStore } from '../store';
 import NodeCard from '../components/NodeCard';
-import CreateNodeModal from '../components/CreateNodeModal';
 import ResourceEstimateModal from '../components/ResourceEstimateModal';
 import { BlockchainType, BLOCKCHAIN_NAMES, NodeStatus, NodeMode } from '../types';
 
 export default function NodesPage() {
   const { nodes } = useStore();
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEstimateModal, setShowEstimateModal] = useState(false);
-  const [defaultBlockchain, setDefaultBlockchain] = useState<BlockchainType>('bitcoin');
-  const [defaultMode, setDefaultMode] = useState<NodeMode>('pruned');
   const [filterBlockchain, setFilterBlockchain] = useState<BlockchainType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<NodeStatus | 'all'>('all');
 
@@ -121,22 +117,9 @@ export default function NodesPage() {
       )}
 
       {/* Modal */}
-      <CreateNodeModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        defaultBlockchain={defaultBlockchain as BlockchainType}
-        defaultMode={defaultMode}
-      />
-
       <ResourceEstimateModal
         isOpen={showEstimateModal}
         onClose={() => setShowEstimateModal(false)}
-        onProceed={(bc, mode) => {
-          setDefaultBlockchain(bc);
-          setDefaultMode(mode as any);
-          setShowEstimateModal(false);
-          setShowCreateModal(true);
-        }}
       />
     </div>
   );
