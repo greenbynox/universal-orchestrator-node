@@ -9,6 +9,7 @@ export class LedgerWalletService implements HardwareWalletService {
 
   private async loadTransport(): Promise<any> {
     try {
+      // @ts-ignore - Optional dependency
       const mod = await import('@ledgerhq/hw-transport-node-hid');
       return (mod as any).default || mod;
     } catch (error) {

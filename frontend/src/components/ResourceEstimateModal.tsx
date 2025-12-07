@@ -26,10 +26,44 @@ export default function ResourceEstimateModal({ isOpen, onClose, onProceed }: Pr
   const [blockchain, setBlockchain] = useState<BlockchainType>('bitcoin');
   const [mode, setMode] = useState<NodeMode>('full');
   const [resources, setResources] = useState<SystemResources | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    console.log('[ResourceEstimateModal] useEffect called, isOpen:', isOpen);
+    
     if (isOpen) {
-      systemApi.getResources().then(setResources).catch(() => setResources(null));
+      console.log('[ResourceEstimateModal] Modal is open, starting fetch');
+      setLoading(true);
+      setError(null);
+      setResources(null);
+      
+      const fetchResources = async () => {
+        try {
+          console.log('[ResourceEstimateModal] Calling systemApi.getResources()');
+          const res = await systemApi.getResources();
+          console.log('[ResourceEstimateModal] ✅ Resources fetched successfully:', res);
+          setResources(res);
+          setError(null);
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          console.error('[ResourceEstimateModal] ❌ Error fetching resources:', errMsg, err);
+          console.error('[ResourceEstimateModal] Error type:', typeof err);
+          console.error('[ResourceEstimateModal] Error stack:', (err as any)?.stack);
+          setError(errMsg);
+          setResources(null);
+        } finally {
+          console.log('[ResourceEstimateModal] Fetch completed');
+          setLoading(false);
+        }
+      };
+      
+      fetchResources();
+    } else {
+      console.log('[ResourceEstimateModal] Modal is closed, resetting state');
+      setResources(null);
+      setError(null);
+      setLoading(false);
     }
   }, [isOpen]);
 
@@ -95,9 +129,30 @@ export default function ResourceEstimateModal({ isOpen, onClose, onProceed }: Pr
 
               {!diskOk && <p className="text-amber-400 text-sm">⚠️ WARNING: Insufficient disk space for this node.</p>}
 
+              {loading && (
+                <div className="text-center text-dark-300 py-4">
+                  <div className="inline-block animate-spin text-dark-400 mb-2">⟳</div>
+                  <p>Fetching system resources...</p>
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-red-300 text-sm">
+                  <p className="font-semibold">Error loading resources:</p>
+                  <p>{error}</p>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <button className="btn-secondary flex-1 justify-center" onClick={onClose}>Annuler</button>
-                <button className="btn-primary flex-1 justify-center" onClick={() => onProceed(blockchain, mode)}>
+                <button 
+                  className="btn-primary flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed" 
+                  onClick={() => {
+                    console.log('[ResourceEstimateModal] Proceeding with blockchain:', blockchain, 'mode:', mode);
+                    onProceed(blockchain, mode);
+                  }}
+                  disabled={loading || error !== null}
+                >
                   Continuer
                 </button>
               </div>

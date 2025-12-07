@@ -17,7 +17,9 @@ const router: RouterType = Router();
 // ============================================================
 router.get('/resources', async (_req: Request, res: Response) => {
   try {
+    console.log('[API] /system/resources - Starting fetch');
     const resources = await getSystemResources();
+    console.log('[API] /system/resources - Resources fetched:', resources);
     
     res.json({
       success: true,
@@ -25,9 +27,11 @@ router.get('/resources', async (_req: Request, res: Response) => {
       timestamp: new Date(),
     });
   } catch (error) {
+    const errMsg = (error as Error).message;
+    console.error('[API] /system/resources - Error:', errMsg, error);
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: errMsg,
       timestamp: new Date(),
     });
   }
