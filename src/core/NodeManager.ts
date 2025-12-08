@@ -21,7 +21,8 @@ import {
   NodeMode,
   CreateNodeRequest,
 } from '../types';
-import { config, BLOCKCHAIN_CONFIGS, getNextAvailablePort } from '../config';
+import { config, getNextAvailablePort } from '../config';
+import { blockchainRegistry } from '../config/blockchains';
 import { logger, getNodeLogger } from '../utils/logger';
 import { generateSecureId } from '../utils/crypto';
 import { canRunNode, recommendNodeMode } from '../utils/system';
@@ -149,7 +150,10 @@ export class NodeManager extends EventEmitter {
     });
     
     const blockchain = validatedRequest.blockchain;
-    const blockchainConfig = BLOCKCHAIN_CONFIGS[blockchain];
+    const chain = blockchainRegistry.get(blockchain);
+    if (!chain) {
+      throw new Error(`Blockchain non supportée: ${blockchain}`);
+    }
     
     // Déterminer le mode (auto-détection si non spécifié)
     let mode = validatedRequest.mode;
@@ -175,13 +179,13 @@ export class NodeManager extends EventEmitter {
       .filter(n => n.blockchain === blockchain)
       .flatMap(n => [n.rpcPort, n.p2pPort, n.wsPort].filter(Boolean)) as number[];
     
-    const ports = getNextAvailablePort(blockchain, existingPorts);
+    const ports = getNextAvailablePort(blockchain, existingPorts, chain);
 
     // Créer la configuration
     const nodeId = `${blockchain}-${generateSecureId().slice(0, 8)}`;
     const nodeConfig: NodeConfig = {
       id: nodeId,
-      name: request.name || `${blockchainConfig.displayName} Node`,
+      name: request.name || `${chain.name} Node`,
       blockchain,
       mode,
       dataPath: path.join(config.paths.nodes, nodeId),
@@ -250,8 +254,11 @@ export class NodeManager extends EventEmitter {
     }
 
     const nodeLogger = getNodeLogger(nodeId);
-    const blockchainConfig = BLOCKCHAIN_CONFIGS[nodeConfig.blockchain];
-    const requirements = blockchainConfig.requirements[nodeConfig.mode];
+    const chain = blockchainRegistry.get(nodeConfig.blockchain);
+    if (!chain?.docker?.requirements?.[nodeConfig.mode]) {
+      throw new Error(`Requirements non trouves pour ${nodeConfig.blockchain} mode ${nodeConfig.mode}`);
+    }
+    const requirements = chain.docker.requirements[nodeConfig.mode]!;
     const template = templateManager.getTemplate(nodeConfig.blockchain, nodeConfig.mode);
     if (template) {
       nodeLogger.info('Template YAML détecté pour ce node', { template: template.id });
@@ -406,8 +413,14 @@ export class NodeManager extends EventEmitter {
    * Construire la configuration du container Docker
    */
   private buildContainerConfig(nodeConfig: NodeConfig, template?: NodeTemplate): Docker.ContainerCreateOptions {
-    const blockchainConfig = BLOCKCHAIN_CONFIGS[nodeConfig.blockchain];
-    const image = template?.docker?.image || blockchainConfig.dockerImages[nodeConfig.mode];
+    const chain = blockchainRegistry.get(nodeConfig.blockchain);
+    if (!chain?.docker) {
+      throw new Error(`Blockchain ${nodeConfig.blockchain} n'a pas de config Docker`);
+    }
+    const image = template?.docker?.image || chain.docker.images[nodeConfig.mode as keyof typeof chain.docker.images];
+    if (!image) {
+      throw new Error(`Pas d'image Docker trouvée pour ${nodeConfig.blockchain} mode ${nodeConfig.mode}`);
+    }
 
     // SÉCURITÉ: Valider que l'image est dans la whitelist si connue
     try {
@@ -449,9 +462,9 @@ export class NodeManager extends EventEmitter {
 
     // Configuration des ports
     const portBindings: { [key: string]: { HostPort: string }[] } = {};
-    const rpcContainerPort = template?.docker?.ports?.rpc || blockchainConfig.defaultPorts.rpc;
-    const p2pContainerPort = template?.docker?.ports?.p2p || blockchainConfig.defaultPorts.p2p;
-    const wsContainerPort = template?.docker?.ports?.ws || blockchainConfig.defaultPorts.ws;
+    const rpcContainerPort = template?.docker?.ports?.rpc || chain.mainnet.defaultPorts?.rpc || 8545;
+    const p2pContainerPort = template?.docker?.ports?.p2p || chain.mainnet.defaultPorts?.p2p || 30303;
+    const wsContainerPort = template?.docker?.ports?.ws || chain.mainnet.defaultPorts?.ws || 8546;
 
     portBindings[`${rpcContainerPort}/tcp`] = [{ HostPort: String(nodeConfig.rpcPort) }];
     portBindings[`${p2pContainerPort}/tcp`] = [{ HostPort: String(nodeConfig.p2pPort) }];
@@ -599,9 +612,16 @@ export class NodeManager extends EventEmitter {
       if (parsed) return parsed;
     }
 
-    const requirements = BLOCKCHAIN_CONFIGS[nodeConfig.blockchain].requirements[nodeConfig.mode];
+    const chainData = blockchainRegistry.get(nodeConfig.blockchain);
+    const requirements = chainData?.docker?.requirements?.[nodeConfig.mode];
+    if (!requirements) {
+      // Fallback defaults by mode
+      const defaults = { full: { memoryGB: 8 }, pruned: { memoryGB: 4 }, light: { memoryGB: 2 } };
+      const defaultMem = (defaults[nodeConfig.mode as keyof typeof defaults]?.memoryGB || 4) * 1024 * 1024 * 1024;
+      return defaultMem;
+    }
     // Convertir GB en bytes
-    return requirements.memoryGB * 1024 * 1024 * 1024;
+    return requirements.memoryGB! * 1024 * 1024 * 1024;
   }
 
   private getCpuShares(template?: NodeTemplate): number {

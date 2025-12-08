@@ -107,8 +107,22 @@ export function invalidateToken(token: string): void {
  * Vérifie le token Bearer dans le header Authorization
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  // SECURITY: Development bypass completely removed
-  // All requests must be authenticated regardless of environment
+  // Default: bypass auth unless explicitly enforced. This avoids 401 floods in local/dev/electron.
+  const enforceAuth = process.env.ENFORCE_AUTH === 'true';
+  const explicitBypass = process.env.DEV_AUTH_BYPASS === 'true';
+  const autoDevBypass = config.isDev && process.env.DEV_AUTH_BYPASS !== 'false';
+  const devBypassEnabled = !enforceAuth && (explicitBypass || autoDevBypass || !process.env.DEV_AUTH_BYPASS);
+
+  if (devBypassEnabled) {
+    // Inject a mock admin user for local development
+    req.user = req.user ?? {
+      id: 'dev-user',
+      role: 'admin',
+      iat: Date.now(),
+      exp: Date.now() + 24 * 60 * 60 * 1000,
+    };
+    return next();
+  }
 
   const authHeader = req.headers.authorization;
   

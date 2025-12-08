@@ -150,7 +150,9 @@ export default function WalletsPage() {
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to connect to ${kind}: ${response.statusText}`);
+        const errorBody = await response.json().catch(() => null);
+        const serverMessage = errorBody?.error || response.statusText;
+        throw new Error(`Failed to connect to ${kind}: ${serverMessage}`);
       }
 
       const data = await response.json();
@@ -170,7 +172,9 @@ export default function WalletsPage() {
       });
 
       if (!addressResponse.ok) {
-        throw new Error(`Failed to get address from ${kind}: ${addressResponse.statusText}`);
+        const errorBody = await addressResponse.json().catch(() => null);
+        const serverMessage = errorBody?.error || addressResponse.statusText;
+        throw new Error(`Failed to get address from ${kind}: ${serverMessage}`);
       }
 
       const addressData = await addressResponse.json();

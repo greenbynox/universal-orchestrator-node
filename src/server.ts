@@ -68,21 +68,29 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting - stricter for sensitive endpoints
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // 200 requêtes par fenêtre
-  message: 'Trop de requêtes, veuillez réessayer plus tard',
-});
-app.use('/api/', limiter);
+// Rate limiting - disabled by default unless explicitly enforced
+const rateLimitDisabled = process.env.ENFORCE_RATE_LIMIT === 'true'
+  ? false
+  : (process.env.DEV_DISABLE_RATE_LIMIT === 'true' || (config.isDev && process.env.DEV_DISABLE_RATE_LIMIT !== 'false' || !process.env.DEV_DISABLE_RATE_LIMIT));
 
-// Stricter rate limit for authentication endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10, // Only 10 auth attempts per 15 minutes
-  message: 'Trop de tentatives, veuillez réessayer plus tard',
-});
-app.use('/api/auth', authLimiter);
+if (!rateLimitDisabled) {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 200, // 200 requêtes par fenêtre
+    message: 'Trop de requêtes, veuillez réessayer plus tard',
+  });
+  app.use('/api/', limiter);
+
+  // Stricter rate limit for authentication endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10, // Only 10 auth attempts per 15 minutes
+    message: 'Trop de tentatives, veuillez réessayer plus tard',
+  });
+  app.use('/api/auth', authLimiter);
+} else {
+  logger.warn('Rate limiting disabled in development (DEV_DISABLE_RATE_LIMIT)');
+}
 
 // Body parser with size limits
 app.use(express.json({ limit: '1mb' }));

@@ -12,7 +12,7 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../utils/logger';
-import { BLOCKCHAIN_CONFIGS } from '../config';
+import { blockchainRegistry } from '../config/blockchains';
 import { BlockchainType, NodeMode } from '../types';
 
 // ============================================================
@@ -20,117 +20,49 @@ import { BlockchainType, NodeMode } from '../types';
 // ============================================================
 
 /**
- * Liste blanche stricte des images Docker autorisées
- * SEULES ces images peuvent être exécutées par l'orchestrateur
- * 
- * Format: 'registry/image:tag' ou 'image:tag'
- * 
- * Pour ajouter une nouvelle image:
- * 1. Vérifier la source officielle
- * 2. Auditer l'image pour les vulnérabilités
- * 3. Ajouter à cette liste avec un commentaire
+ * Génère la whitelist des images Docker à partir de blockchainRegistry
+ * Cela permet une whitelist dynamique qui s'adapte automatiquement
+ * quand on ajoute des blockchains
  */
-export const DOCKER_IMAGE_WHITELIST: Set<string> = new Set([
-  // ==================== BITCOIN ====================
-  'kylemanna/bitcoind:latest',
-  'kylemanna/bitcoind:stable',
-  'ruimarinho/bitcoin-core:latest',
-  'lncm/neutrino:latest',
+function generateDockerImageWhitelist(): Set<string> {
+  const whitelist = new Set<string>();
   
-  // ==================== ETHEREUM ====================
-  'ethereum/client-go:latest',
-  'ethereum/client-go:stable',
-  'ethereum/client-go:v1.13.15',
-  'hyperledger/besu:latest',
-  'consensys/teku:latest',
-  'prysmaticlabs/prysm-beacon-chain:latest',
+  // Ajouter les images de base (registries courantes)
+  const commonImages = [
+    // Registries officielles courantes
+    'kylemanna/bitcoind:latest',
+    'kylemanna/bitcoind:stable',
+    'ethereum/client-go:latest',
+    'ethereum/client-go:stable',
+    'solanalabs/solana:latest',
+    'parity/polkadot:latest',
+    'inputoutput/cardano-node:latest',
+  ];
   
-  // ==================== SOLANA ====================
-  'solanalabs/solana:latest',
-  'solanalabs/solana:v1.18',
+  commonImages.forEach(img => whitelist.add(img));
   
-  // ==================== MONERO ====================
-  'sethsimmons/simple-monerod:latest',
-  'xmrto/monero:latest',
+  // Ajouter toutes les images des blockchains configurées
+  try {
+    const { blockchainRegistry } = require('../config/blockchains');
+    const chains = blockchainRegistry.getAll();
+    
+    chains.forEach((chain: any) => {
+      if (chain.docker?.images) {
+        Object.values(chain.docker.images).forEach((image: any) => {
+          if (typeof image === 'string' && image.trim()) {
+            whitelist.add(image.toLowerCase());
+          }
+        });
+      }
+    });
+  } catch (error) {
+    console.warn('Could not load blockchainRegistry for whitelist generation', error);
+  }
   
-  // ==================== BNB CHAIN ====================
-  'ghcr.io/bnb-chain/bsc:latest',
-  'bnb-chain/bsc:latest',
-  
-  // ==================== CARDANO ====================
-  'inputoutput/cardano-node:latest',
-  'ghcr.io/intersectmbo/cardano-node:latest',
-  
-  // ==================== POLKADOT ====================
-  'parity/polkadot:latest',
-  'parity/polkadot:v1.8.0',
-  
-  // ==================== AVALANCHE ====================
-  'avaplatform/avalanchego:latest',
-  
-  // ==================== POLYGON ====================
-  'maticnetwork/bor:latest',
-  '0xpolygon/heimdall:latest',
-  
-  // ==================== COSMOS ====================
-  'ghcr.io/cosmos/gaia:latest',
-  'tendermint/tendermint:latest',
-  
-  // ==================== NEAR ====================
-  'nearprotocol/nearcore:latest',
-  
-  // ==================== ALGORAND ====================
-  'algorand/algod:latest',
-  
-  // ==================== TEZOS ====================
-  'tezos/tezos:latest',
-  
-  // ==================== TON ====================
-  'tonlabs/ton-node:latest',
-  'ton-blockchain/ton:latest',
-  
-  // ==================== LITECOIN ====================
-  'litecoin/litecoin:latest',
-  'uphold/litecoin-core:latest',
-  
-  // ==================== DOGECOIN ====================
-  'dogecoin/dogecoin:latest',
-  
-  // ==================== ZCASH ====================
-  'electriccoinco/zcashd:latest',
-  'zcashd:latest',
-  
-  // ==================== DASH ====================
-  'dashcore/dashd:latest',
-  
-  // ==================== RIPPLE/XRP ====================
-  'xrplf/rippled:latest',
-  
-  // ==================== STELLAR ====================
-  'stellar/stellar-core:latest',
-  
-  // ==================== CHAINLINK ====================
-  'smartcontract/chainlink:latest',
-  
-  // ==================== FILECOIN ====================
-  'filecoin/lotus:latest',
-  
-  // ==================== ARBITRUM ====================
-  'offchainlabs/nitro-node:latest',
-  
-  // ==================== OPTIMISM ====================
-  'ethereumoptimism/op-node:latest',
-  'ethereumoptimism/op-geth:latest',
-  
-  // ==================== BASE ====================
-  'base-org/node:latest',
-  
-  // ==================== FANTOM ====================
-  'fantomfoundation/go-opera:latest',
-  
-  // ==================== HEDERA ====================
-  'hashgraph/hedera-mirror-node:latest',
-]);
+  return whitelist;
+}
+
+export const DOCKER_IMAGE_WHITELIST: Set<string> = generateDockerImageWhitelist();
 
 // Registries / prefixes autorisés (patterns)
 export const DOCKER_REGISTRY_WHITELIST: string[] = [
@@ -222,13 +154,35 @@ export function validateDockerImage(image: string): void {
  * @throws Error si la blockchain n'est pas supportée ou l'image non autorisée
  */
 export function getValidatedDockerImage(blockchain: BlockchainType, mode: NodeMode): string {
-  const config = BLOCKCHAIN_CONFIGS[blockchain];
+  const chain = blockchainRegistry.get(blockchain);
   
-  if (!config) {
+  if (!chain) {
     throw new Error(`Blockchain non supportée: ${blockchain}`);
   }
   
-  const image = config.dockerImages[mode];
+  // Si la blockchain n'a pas de config docker, fournir des defaults intelligents
+  if (!chain.docker) {
+    // Pour les chains EVM, utiliser geth (compatible avec toutes les EVM chains)
+    if (chain.chainType === 'evm') {
+      const defaultImages: Record<NodeMode, string> = {
+        full: 'ethereum/client-go:latest',
+        pruned: 'ethereum/client-go:latest',
+        light: 'ethereum/client-go:latest',
+      };
+      
+      const image = defaultImages[mode];
+      
+      // Valider que l'image est dans la whitelist
+      validateDockerImage(image);
+      
+      return image;
+    }
+    
+    // Pour les autres types, il faut une config docker explicite
+    throw new Error(`Blockchain non supportée: ${blockchain}`);
+  }
+  
+  const image = chain.docker.images[mode];
   
   if (!image) {
     throw new Error(`Mode "${mode}" non supporté pour ${blockchain}`);
@@ -452,8 +406,8 @@ export function validateHost(host: string): string {
 export function validateBlockchainType(blockchain: string): BlockchainType {
   const sanitized = sanitizeInput(blockchain).toLowerCase();
   
-  if (!BLOCKCHAIN_CONFIGS[sanitized as BlockchainType]) {
-    throw new Error(`Blockchain non supportée: ${blockchain}`);
+  if (!blockchainRegistry.get(sanitized)) {
+    throw new Error(`Blockchain non supportee: ${blockchain}`);
   }
   
   return sanitized as BlockchainType;

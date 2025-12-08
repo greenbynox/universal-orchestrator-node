@@ -27,13 +27,31 @@ export class TrezorWalletService implements HardwareWalletService {
 
   async connect(): Promise<void> {
     this.trezor = await this.loadTrezor();
-    await this.trezor.init({ manifest: { email: 'support@example.com', appUrl: 'https://orchestrator.local' } });
-    this.connected = true;
-    logger.info('Trezor connecté');
+
+    try {
+      // Add a timeout to prevent hanging forever if Trezor is not connected
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Trezor connection timeout (5 seconds). Device not found or Trezor Bridge not responding.')), 5000)
+      );
+      
+      await Promise.race([
+        this.trezor.init({ manifest: { email: 'support@example.com', appUrl: 'https://orchestrator.local' } }),
+        timeoutPromise
+      ]);
+      
+      this.connected = true;
+      logger.info('Trezor connecté');
+    } catch (error) {
+      logger.error('Trezor connection failed', error);
+      throw new Error(
+        'Trezor non detecte. Branchez et deverrouillez votre appareil, confirmez l\'autorisation Trezor Bridge/Connect. Details: ' +
+        (error as Error).message,
+      );
+    }
   }
 
   async disconnect(): Promise<void> {
-    if (this.trezor) {
+    if (this.trezor && this.trezor.dispose) {
       await this.trezor.dispose();
     }
     this.connected = false;
@@ -44,11 +62,21 @@ export class TrezorWalletService implements HardwareWalletService {
   }
 
   async getAddress(blockchain: SupportedChain, derivationPath: string): Promise<string> {
-    this.ensureConnected();
-    if (!this.trezor) throw new Error('Trezor non connecté');
-    logger.info(`Deriving address from Trezor for ${blockchain} on ${derivationPath}`);
-
     try {
+      // Ensure Trezor is loaded and connected
+      if (!this.trezor) {
+        this.trezor = await this.loadTrezor();
+      }
+      if (!this.connected) {
+        await this.connect();
+      }
+      
+      if (!this.trezor) {
+        throw new Error('Trezor transport not available. Make sure Trezor is connected and unlocked.');
+      }
+      
+      logger.info(`Deriving address from Trezor for ${blockchain} on ${derivationPath}`);
+
       switch (blockchain) {
         case 'bitcoin': {
           const result = await this.trezor.getAddress({ path: derivationPath, coin: 'btc' });
@@ -78,17 +106,34 @@ export class TrezorWalletService implements HardwareWalletService {
           throw new Error(`Blockchain ${blockchain} not supported by Trezor`);
       }
     } catch (error) {
-      logger.error(`Failed to derive address from Trezor`, error);
-      throw new Error(`Cannot derive address from Trezor: ${(error as Error).message}`);
+      const errorMsg = (error as Error).message;
+      logger.error(`Failed to derive address from Trezor: ${errorMsg}`, error);
+      
+      // Provide better error message if it's a transport issue
+      if (errorMsg.includes('Transport') || errorMsg.includes('not available')) {
+        throw new Error('Trezor not detected. Please make sure Trezor is connected, unlocked, and Trezor Bridge is running.');
+      }
+      
+      throw new Error(`Cannot derive address from Trezor: ${errorMsg}`);
     }
   }
 
   async signTransaction(tx: unknown): Promise<string> {
-    this.ensureConnected();
-    if (!this.trezor) throw new Error('Trezor non connecté');
-    logger.info('Signing transaction with Trezor...');
-
     try {
+      // Ensure Trezor is loaded and connected
+      if (!this.trezor) {
+        this.trezor = await this.loadTrezor();
+      }
+      if (!this.connected) {
+        await this.connect();
+      }
+      
+      if (!this.trezor) {
+        throw new Error('Trezor transport not available. Make sure Trezor is connected and unlocked.');
+      }
+      
+      logger.info('Signing transaction with Trezor...');
+
       // Serialize the transaction
       const txData = typeof tx === 'string' ? tx : JSON.stringify(tx);
       
@@ -108,8 +153,15 @@ export class TrezorWalletService implements HardwareWalletService {
       
       return typeof signature === 'string' ? signature : Buffer.from(signature).toString('hex');
     } catch (error) {
-      logger.error('Failed to sign transaction with Trezor', error);
-      throw new Error(`Cannot sign with Trezor: ${(error as Error).message}`);
+      const errorMsg = (error as Error).message;
+      logger.error(`Failed to sign transaction with Trezor: ${errorMsg}`, error);
+      
+      // Provide better error message if it's a transport issue
+      if (errorMsg.includes('Transport') || errorMsg.includes('not available')) {
+        throw new Error('Trezor not detected. Please make sure Trezor is connected, unlocked, and Trezor Bridge is running.');
+      }
+      
+      throw new Error(`Cannot sign with Trezor: ${errorMsg}`);
     }
   }
 }

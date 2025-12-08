@@ -13,21 +13,41 @@ export class LedgerWalletService implements HardwareWalletService {
       const mod = await import('@ledgerhq/hw-transport-node-hid');
       return (mod as any).default || mod;
     } catch (error) {
+      const hint = 'Installez @ledgerhq/hw-transport-node-hid puis relancez npm install avec Node 20 LTS et les outils C++/Windows SDK (Desktop development with C++).';
+
       await alertManager.trigger({
         type: 'CUSTOM',
         severity: 'CRITICAL',
-        message: 'Hardware Wallet (Ledger) non disponible. Veuillez installer les dépendances nécessaires.',
+        message: `Hardware Wallet (Ledger) non disponible. ${hint}`,
         timestamp: new Date(),
         metadata: { error: (error as Error).message },
       });
-      throw new Error('Hardware Wallet (Ledger) non disponible. Veuillez installer les dépendances nécessaires.');
+      throw new Error(`Hardware Wallet (Ledger) non disponible. ${hint}`);
     }
   }
 
   async connect(): Promise<void> {
     const TransportNodeHid = await this.loadTransport();
-    this.transport = await TransportNodeHid.create();
-    logger.info('Ledger connecté');
+
+    try {
+      // Add a timeout to prevent hanging forever if Ledger is not connected
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Ledger connection timeout (5 seconds). Device not found or not responding.')), 5000)
+      );
+      
+      this.transport = await Promise.race([
+        TransportNodeHid.create(),
+        timeoutPromise as Promise<any>
+      ]);
+      
+      logger.info('Ledger connecté');
+    } catch (error) {
+      logger.error('Ledger connection failed', error);
+      throw new Error(
+        'Ledger non detecte. Branchez et deverrouillez votre appareil, puis ouvrez l\'application Ledger correspondante (BTC/ETH, etc.). Details: ' +
+        (error as Error).message,
+      );
+    }
   }
 
   async disconnect(): Promise<void> {
@@ -44,12 +64,19 @@ export class LedgerWalletService implements HardwareWalletService {
   }
 
   async getAddress(blockchain: SupportedChain, derivationPath: string): Promise<string> {
-    this.ensureConnected();
-    logger.info(`Reading address from Ledger ${blockchain} on ${derivationPath}`);
-    
     try {
+      // Ensure Ledger is connected
+      if (!this.transport) {
+        await this.connect();
+      }
+      
+      if (!this.transport) {
+        throw new Error('Ledger transport not initialized. Make sure Ledger is connected and unlocked.');
+      }
+      
+      logger.info(`Reading address from Ledger ${blockchain} on ${derivationPath}`);
+      
       // Ledger HID communication for address derivation
-      // The transport object provides low-level communication with the Ledger device
       const response = await (this.transport as any).send(0x80, 0x02, 0x00, 0x00);
       
       if (!response) {
@@ -63,16 +90,33 @@ export class LedgerWalletService implements HardwareWalletService {
       logger.info(`Address derived from Ledger for ${blockchain}: ${address.substring(0, 10)}...`);
       return address;
     } catch (error) {
-      logger.error(`Failed to derive address from Ledger`, error);
-      throw new Error(`Cannot derive address from Ledger: ${(error as Error).message}`);
+      const errorMsg = (error as Error).message;
+      logger.error(`Failed to derive address from Ledger: ${errorMsg}`, error);
+      
+      // Provide better error message for transport issues
+      if (errorMsg.includes('Transport') || errorMsg.includes('not initialized') || errorMsg.includes('No response')) {
+        throw new Error('Ledger not detected. Please make sure Ledger is connected, unlocked, and the correct app is open.');
+      }
+      
+      throw new Error(
+        `Impossible de dériver l'adresse depuis Ledger. Vérifiez que l'app ${blockchain} est ouverte et que l'appareil est déverrouillé. Détails: ${errorMsg}`,
+      );
     }
   }
 
   async signTransaction(tx: unknown): Promise<string> {
-    this.ensureConnected();
-    logger.info('Signing transaction with Ledger...');
-    
     try {
+      // Ensure Ledger is connected
+      if (!this.transport) {
+        await this.connect();
+      }
+      
+      if (!this.transport) {
+        throw new Error('Ledger transport not initialized. Make sure Ledger is connected and unlocked.');
+      }
+      
+      logger.info('Signing transaction with Ledger...');
+      
       // Serialize the transaction
       const txData = JSON.stringify(tx);
       const txBuffer = Buffer.from(txData, 'utf-8');
@@ -90,8 +134,15 @@ export class LedgerWalletService implements HardwareWalletService {
       
       return signature;
     } catch (error) {
-      logger.error('Failed to sign transaction with Ledger', error);
-      throw new Error(`Cannot sign with Ledger: ${(error as Error).message}`);
+      const errorMsg = (error as Error).message;
+      logger.error(`Failed to sign transaction with Ledger: ${errorMsg}`, error);
+      
+      // Provide better error message for transport issues
+      if (errorMsg.includes('Transport') || errorMsg.includes('not initialized') || errorMsg.includes('No response')) {
+        throw new Error('Ledger not detected. Please make sure Ledger is connected, unlocked, and the correct app is open.');
+      }
+      
+      throw new Error(`Cannot sign with Ledger: ${errorMsg}`);
     }
   }
 }
