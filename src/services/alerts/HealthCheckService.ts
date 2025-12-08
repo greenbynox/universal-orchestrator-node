@@ -97,40 +97,45 @@ export class HealthCheckService {
     const syncDelayHours = this.options.syncDelayHours ?? 12;
 
     for (const node of nodes) {
-      const state = node.state;
+      try {
+        const state = node.state;
 
-      if (state.status === 'error' || state.status === 'stopped') {
-        const lastSeen = this.lastSyncMap.get(node.config.id);
-        if (!lastSeen || now - lastSeen.timestamp > downThreshold) {
-          await alertManager.trigger({
-            type: 'NODE_DOWN',
-            severity: 'CRITICAL',
-            nodeId: node.config.id,
-            message: `${node.config.name} (${node.config.blockchain}) indisponible`,
+        if (state.status === 'error' || state.status === 'stopped') {
+          const lastSeen = this.lastSyncMap.get(node.config.id);
+          if (!lastSeen || now - lastSeen.timestamp > downThreshold) {
+            await alertManager.trigger({
+              type: 'NODE_DOWN',
+              severity: 'CRITICAL',
+              nodeId: node.config.id,
+              message: `${node.config.name} (${node.config.blockchain}) indisponible`,
+              timestamp: new Date(),
+            });
+          }
+        } else {
+          await alertManager.resolveByType('NODE_DOWN', node.config.id);
+        }
+
+        // Sync progress tracking
+        const prev = this.lastSyncMap.get(node.config.id);
+        const progress = state.syncProgress ?? 0;
+        if (!prev || progress !== prev.progress) {
+          this.lastSyncMap.set(node.config.id, { progress, timestamp: now });
+          await alertManager.resolveByType('SYNC_DELAYED', node.config.id);
+        } else {
+          const hoursStuck = (now - prev.timestamp) / (1000 * 60 * 60);
+          if (hoursStuck >= syncDelayHours) {
+            await alertManager.trigger({
+              type: 'SYNC_DELAYED',
+              severity: 'WARNING',
+              nodeId: node.config.id,
+              message: `${node.config.name} synchronisation bloquée depuis ${hoursStuck.toFixed(1)}h`,
             timestamp: new Date(),
           });
         }
-      } else {
-        await alertManager.resolveByType('NODE_DOWN', node.config.id);
       }
-
-      // Sync progress tracking
-      const prev = this.lastSyncMap.get(node.config.id);
-      const progress = state.syncProgress ?? 0;
-      if (!prev || progress !== prev.progress) {
-        this.lastSyncMap.set(node.config.id, { progress, timestamp: now });
-        await alertManager.resolveByType('SYNC_DELAYED', node.config.id);
-      } else {
-        const hoursStuck = (now - prev.timestamp) / (1000 * 60 * 60);
-        if (hoursStuck >= syncDelayHours) {
-          await alertManager.trigger({
-            type: 'SYNC_DELAYED',
-            severity: 'WARNING',
-            nodeId: node.config.id,
-            message: `${node.config.name} synchronisation bloquée depuis ${hoursStuck.toFixed(1)}h`,
-            timestamp: new Date(),
-          });
-        }
+      } catch (error) {
+        // Log error but continue with other nodes
+        console.warn(`Health check error for node ${node.config.id}:`, error);
       }
     }
   }

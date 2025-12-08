@@ -9,13 +9,14 @@ const router: ExpressRouter = Router();
 
 // ============================================================
 // HARDWARE WALLET ROUTES
+// Mounted at /api/wallets/hardware
 // ============================================================
 
 /**
  * GET /api/wallets/hardware/ledger/connect
  * Connexion à un hardware wallet Ledger
  */
-router.get('/hardware/ledger/connect', async (req: Request, res: Response) => {
+router.get('/ledger/connect', async (req: Request, res: Response) => {
   try {
     await ledgerWalletService.connect();
     logger.info('Ledger wallet connected');
@@ -32,7 +33,7 @@ router.get('/hardware/ledger/connect', async (req: Request, res: Response) => {
       message: `Erreur de connexion Ledger: ${(error as Error).message}`,
       timestamp: new Date(),
     });
-    res.status(500).json({
+    res.status(503).json({
       success: false,
       error: (error as Error).message,
       device: 'ledger',
@@ -44,7 +45,7 @@ router.get('/hardware/ledger/connect', async (req: Request, res: Response) => {
  * GET /api/wallets/hardware/ledger/disconnect
  * Déconnexion du hardware wallet Ledger
  */
-router.get('/hardware/ledger/disconnect', async (req: Request, res: Response) => {
+router.get('/ledger/disconnect', async (req: Request, res: Response) => {
   try {
     await ledgerWalletService.disconnect();
     logger.info('Ledger wallet disconnected');
@@ -55,7 +56,7 @@ router.get('/hardware/ledger/disconnect', async (req: Request, res: Response) =>
     });
   } catch (error) {
     logger.error('Ledger disconnection failed', error);
-    res.status(500).json({
+    res.status(503).json({
       success: false,
       error: (error as Error).message,
       device: 'ledger',
@@ -68,7 +69,7 @@ router.get('/hardware/ledger/disconnect', async (req: Request, res: Response) =>
  * Récupérer une adresse d'un Ledger
  * Body: { blockchain: 'bitcoin' | 'ethereum' | 'solana' | 'cosmos', derivationPath: string }
  */
-router.post('/hardware/ledger/address', async (req: Request, res: Response) => {
+router.post('/ledger/address', async (req: Request, res: Response) => {
   try {
     const { blockchain, derivationPath } = req.body;
 
@@ -91,7 +92,7 @@ router.post('/hardware/ledger/address', async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('Failed to get address from Ledger', error);
-    res.status(500).json({
+    res.status(503).json({
       success: false,
       error: (error as Error).message,
       device: 'ledger',
@@ -103,7 +104,7 @@ router.post('/hardware/ledger/address', async (req: Request, res: Response) => {
  * POST /api/wallets/hardware/trezor/connect
  * Connexion à un hardware wallet Trezor
  */
-router.post('/hardware/trezor/connect', async (req: Request, res: Response) => {
+router.post('/trezor/connect', async (_req: Request, res: Response) => {
   try {
     await trezorWalletService.connect();
     logger.info('Trezor wallet connected');
@@ -120,7 +121,7 @@ router.post('/hardware/trezor/connect', async (req: Request, res: Response) => {
       message: `Erreur de connexion Trezor: ${(error as Error).message}`,
       timestamp: new Date(),
     });
-    res.status(500).json({
+    res.status(503).json({
       success: false,
       error: (error as Error).message,
       device: 'trezor',
@@ -132,7 +133,7 @@ router.post('/hardware/trezor/connect', async (req: Request, res: Response) => {
  * GET /api/wallets/hardware/trezor/disconnect
  * Déconnexion du hardware wallet Trezor
  */
-router.get('/hardware/trezor/disconnect', async (req: Request, res: Response) => {
+router.get('/trezor/disconnect', async (_req: Request, res: Response) => {
   try {
     await trezorWalletService.disconnect();
     logger.info('Trezor wallet disconnected');
@@ -143,7 +144,7 @@ router.get('/hardware/trezor/disconnect', async (req: Request, res: Response) =>
     });
   } catch (error) {
     logger.error('Trezor disconnection failed', error);
-    res.status(500).json({
+    res.status(503).json({
       success: false,
       error: (error as Error).message,
       device: 'trezor',
@@ -156,7 +157,7 @@ router.get('/hardware/trezor/disconnect', async (req: Request, res: Response) =>
  * Récupérer une adresse d'un Trezor
  * Body: { blockchain: 'bitcoin' | 'ethereum' | 'solana' | 'cosmos', derivationPath: string }
  */
-router.post('/hardware/trezor/address', async (req: Request, res: Response) => {
+router.post('/trezor/address', async (req: Request, res: Response) => {
   try {
     const { blockchain, derivationPath } = req.body;
 
@@ -179,7 +180,7 @@ router.post('/hardware/trezor/address', async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('Failed to get address from Trezor', error);
-    res.status(500).json({
+    res.status(503).json({
       success: false,
       error: (error as Error).message,
       device: 'trezor',
@@ -192,7 +193,7 @@ router.post('/hardware/trezor/address', async (req: Request, res: Response) => {
  * Signer une transaction avec un hardware wallet
  * Body: { device: 'ledger' | 'trezor', transaction: any }
  */
-router.post('/hardware/sign', async (req: Request, res: Response) => {
+router.post('/sign', async (req: Request, res: Response) => {
   try {
     const { device, transaction } = req.body;
 

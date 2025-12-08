@@ -111,6 +111,8 @@ export default function Layout({ children }: LayoutProps) {
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-lg hover:bg-dark-800 transition-colors"
+            aria-label={sidebarOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            title={sidebarOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
           >
             {sidebarOpen ? (
               <XMarkIcon className="w-6 h-6 text-dark-400" />

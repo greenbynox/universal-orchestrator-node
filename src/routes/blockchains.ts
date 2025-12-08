@@ -190,11 +190,15 @@ router.get('/:id/modes', (req: Request, res: Response) => {
     
     // Map to include requirements for each mode
     const modes = supportedModes.map((mode: any) => {
-      const requirements = chain.docker?.requirements?.[mode as any] || {
-        diskGB: 500,
-        memoryGB: 8,
-        syncDays: 7,
+      // Default requirements per mode (proper fallback based on mode)
+      const defaultsByMode: Record<string, { diskGB: number; memoryGB: number; cpuCores: number; syncDays: number }> = {
+        full: { diskGB: 500, memoryGB: 8, cpuCores: 2, syncDays: 7 },
+        pruned: { diskGB: 100, memoryGB: 4, cpuCores: 2, syncDays: 3 },
+        light: { diskGB: 10, memoryGB: 2, cpuCores: 1, syncDays: 0 },
+        archive: { diskGB: 2000, memoryGB: 16, cpuCores: 4, syncDays: 14 },
       };
+      
+      const requirements = chain.docker?.requirements?.[mode as any] || defaultsByMode[mode as string] || defaultsByMode.full;
 
       return {
         id: mode,

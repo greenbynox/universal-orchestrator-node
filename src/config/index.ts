@@ -238,18 +238,32 @@ export function getBlockchainConfig(blockchain: BlockchainType): BlockchainConfi
 /**
  * Obtenir le prochain port disponible pour un type de node
  */
-export function getNextAvailablePort(blockchain: BlockchainType, existingPorts: number[]): { rpc: number; p2p: number; ws?: number } {
-  const base = BLOCKCHAIN_CONFIGS[blockchain].defaultPorts;
+export function getNextAvailablePort(
+  blockchain: BlockchainType, 
+  existingPorts: number[],
+  blockchainDef?: any // Optional BlockchainDefinition to avoid circular imports
+): { rpc: number; p2p: number; ws?: number } {
+  let defaultPorts: { rpc: number; p2p: number; ws?: number };
+  
+  // Utiliser blockchainRegistry si fourni, sinon utiliser BLOCKCHAIN_CONFIGS
+  if (blockchainDef && blockchainDef.mainnet) {
+    defaultPorts = blockchainDef.mainnet.defaultPorts;
+  } else {
+    // Fallback à BLOCKCHAIN_CONFIGS
+    const config = BLOCKCHAIN_CONFIGS[blockchain];
+    defaultPorts = config ? config.defaultPorts : { rpc: 8545, p2p: 30303, ws: 8546 };
+  }
+  
   let offset = 0;
   
-  while (existingPorts.includes(base.rpc + offset) || existingPorts.includes(base.p2p + offset)) {
+  while (existingPorts.includes(defaultPorts.rpc + offset) || existingPorts.includes(defaultPorts.p2p + offset)) {
     offset += 100;
   }
   
   return {
-    rpc: base.rpc + offset,
-    p2p: base.p2p + offset,
-    ws: base.ws ? base.ws + offset : undefined,
+    rpc: defaultPorts.rpc + offset,
+    p2p: defaultPorts.p2p + offset,
+    ws: defaultPorts.ws ? defaultPorts.ws + offset : undefined,
   };
 }
 

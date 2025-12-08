@@ -13,7 +13,7 @@ import {
   BlockchainType, 
   NodeMode 
 } from '../types';
-import { BLOCKCHAIN_CONFIGS } from '../config';
+import { blockchainRegistry } from '../config/blockchains';
 import { logger } from './logger';
 
 /**
@@ -147,32 +147,46 @@ export async function recommendNodeMode(
   blockchain: BlockchainType
 ): Promise<NodeModeRecommendation> {
   const resources = await getSystemResources();
-  const config = BLOCKCHAIN_CONFIGS[blockchain];
-  const requirements = config.requirements;
+  const chain = blockchainRegistry.get(blockchain);
+  if (!chain?.docker?.requirements) {
+    // Fallback defaults if blockchain has no requirements
+    const defaultRequirements = { 
+      full: { diskGB: 500, memoryGB: 8, cpuCores: 2, syncDays: 7 },
+      pruned: { diskGB: 100, memoryGB: 4, cpuCores: 2, syncDays: 3 },
+      light: { diskGB: 10, memoryGB: 2, cpuCores: 1, syncDays: 0 },
+    };
+    return {
+      blockchain,
+      recommendedMode: 'light',
+      reason: 'Mode light recommandé (blockchain requirements non trouvées).',
+      requirements: defaultRequirements.light,
+    };
+  }
+  const requirements = chain.docker.requirements;
 
   // Vérifier si le système peut supporter un full node
   if (
-    resources.availableDiskGB >= requirements.full.diskGB &&
-    resources.availableMemoryGB >= requirements.full.memoryGB
+    resources.availableDiskGB >= (requirements.full?.diskGB || 500) &&
+    resources.availableMemoryGB >= (requirements.full?.memoryGB || 8)
   ) {
     return {
       blockchain,
       recommendedMode: 'full',
       reason: 'Votre système a assez de ressources pour un full node.',
-      requirements: requirements.full,
+      requirements: requirements.full || { diskGB: 500, memoryGB: 8, cpuCores: 2, syncDays: 7 },
     };
   }
 
   // Vérifier pour pruned
   if (
-    resources.availableDiskGB >= requirements.pruned.diskGB &&
-    resources.availableMemoryGB >= requirements.pruned.memoryGB
+    resources.availableDiskGB >= (requirements.pruned?.diskGB || 100) &&
+    resources.availableMemoryGB >= (requirements.pruned?.memoryGB || 4)
   ) {
     return {
       blockchain,
       recommendedMode: 'pruned',
       reason: 'Mode pruned recommandé pour économiser l\'espace disque.',
-      requirements: requirements.pruned,
+      requirements: requirements.pruned || { diskGB: 100, memoryGB: 4, cpuCores: 2, syncDays: 3 },
     };
   }
 
@@ -181,7 +195,7 @@ export async function recommendNodeMode(
     blockchain,
     recommendedMode: 'light',
     reason: 'Mode light recommandé car ressources limitées.',
-    requirements: requirements.light,
+    requirements: requirements.light || { diskGB: 10, memoryGB: 2, cpuCores: 1, syncDays: 0 },
   };
 }
 
@@ -195,8 +209,34 @@ export async function canRunNode(
   mode: NodeMode
 ): Promise<{ canRun: boolean; reason?: string; warning?: string }> {
   const resources = await getSystemResources();
-  const config = BLOCKCHAIN_CONFIGS[blockchain];
-  const requirements = config.requirements[mode];
+  const chain = blockchainRegistry.get(blockchain);
+  if (!chain?.docker?.requirements?.[mode]) {
+    // Fallback defaults if blockchain requirements not found
+    const defaults = { full: { diskGB: 500, memoryGB: 8 }, pruned: { diskGB: 100, memoryGB: 4 }, light: { diskGB: 10, memoryGB: 2 } };
+    const defaultReqs = defaults[mode as keyof typeof defaults] || { diskGB: 10, memoryGB: 2 };
+    
+    if (resources.availableDiskGB < defaultReqs.diskGB) {
+      return {
+        canRun: false,
+        reason: `Espace disque insuffisant. Requis: ${defaultReqs.diskGB}GB, Disponible: ${resources.availableDiskGB}GB`,
+      };
+    }
+    if (resources.totalMemoryGB < defaultReqs.memoryGB) {
+      return {
+        canRun: false,
+        reason: `Mémoire RAM totale insuffisante. Requis: ${defaultReqs.memoryGB}GB, Votre système: ${resources.totalMemoryGB}GB`,
+      };
+    }
+    if (resources.availableMemoryGB < defaultReqs.memoryGB * 0.5) {
+      return {
+        canRun: true,
+        warning: `RAM disponible faible (${resources.availableMemoryGB}GB). Fermez des applications pour de meilleures performances.`,
+      };
+    }
+    return { canRun: true };
+  }
+
+  const requirements = chain.docker.requirements[mode]!;
 
   if (resources.availableDiskGB < requirements.diskGB) {
     return {
