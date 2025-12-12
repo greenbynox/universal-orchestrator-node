@@ -10,10 +10,16 @@ import type {
 
 const API_BASE = '/api';
 
+// Timeout configurations for different types of operations
+const TIMEOUTS = {
+  DEFAULT: 30000,     // 30 seconds for regular operations
+  LONG_RUNNING: 120000, // 2 minutes for Docker operations (start, stop, restart)
+};
+
 // Instance Axios configurée
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 30000,
+  timeout: TIMEOUTS.DEFAULT,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,7 +29,13 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.error || error.message || 'Une erreur est survenue';
+    let message = error.response?.data?.error || error.message || 'Une erreur est survenue';
+    
+    // Provide better messages for timeout errors
+    if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+      message = 'L\'opération prend plus de temps que prévu. Veuillez vérifier l\'état du node dans quelques instants.';
+    }
+    
     console.error('API Error:', message);
     throw new Error(message);
   }
@@ -52,28 +64,28 @@ export const nodesApi = {
     blockchain: BlockchainType;
     mode?: NodeMode;
   }): Promise<NodeInfo> => {
-    const { data } = await api.post('/nodes', params);
+    const { data } = await api.post('/nodes', params, { timeout: TIMEOUTS.LONG_RUNNING });
     return data.data;
   },
 
   // Démarrer un node
   start: async (id: string): Promise<void> => {
-    await api.post(`/nodes/${id}/start`);
+    await api.post(`/nodes/${id}/start`, {}, { timeout: TIMEOUTS.LONG_RUNNING });
   },
 
   // Arrêter un node
   stop: async (id: string): Promise<void> => {
-    await api.post(`/nodes/${id}/stop`);
+    await api.post(`/nodes/${id}/stop`, {}, { timeout: TIMEOUTS.LONG_RUNNING });
   },
 
   // Redémarrer un node
   restart: async (id: string): Promise<void> => {
-    await api.post(`/nodes/${id}/restart`);
+    await api.post(`/nodes/${id}/restart`, {}, { timeout: TIMEOUTS.LONG_RUNNING });
   },
 
   // Supprimer un node
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/nodes/${id}`);
+    await api.delete(`/nodes/${id}`, { timeout: TIMEOUTS.LONG_RUNNING });
   },
 
   // Obtenir les logs d'un node
