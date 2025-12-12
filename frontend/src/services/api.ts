@@ -13,7 +13,9 @@ const API_BASE = '/api';
 // Timeout configurations for different types of operations
 const TIMEOUTS = {
   DEFAULT: 30000,     // 30 seconds for regular operations
-  LONG_RUNNING: 120000, // 2 minutes for Docker operations (start, stop, restart)
+  LONG_RUNNING: 120000, // 2 minutes for Docker operations (start, stop, restart, create, delete)
+                        // Docker operations can take significant time when pulling images,
+                        // initializing blockchain data, or stopping containers gracefully
 };
 
 // Instance Axios configurée
@@ -32,7 +34,8 @@ api.interceptors.response.use(
     let message = error.response?.data?.error || error.message || 'Une erreur est survenue';
     
     // Provide better messages for timeout errors
-    if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+    // Axios sets error.code to 'ECONNABORTED' for timeout errors
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
       message = 'L\'opération prend plus de temps que prévu. Veuillez vérifier l\'état du node dans quelques instants.';
     }
     
