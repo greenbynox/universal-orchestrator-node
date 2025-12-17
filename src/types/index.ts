@@ -10,7 +10,7 @@
 // ============================================================
 
 /** Blockchains supportées */
-export type BlockchainType = 'bitcoin' | 'ethereum' | 'solana' | 'monero' | 'bnb';
+export type BlockchainType = string;
 
 /** Mode de synchronisation du node */
 export type NodeMode = 'full' | 'pruned' | 'light';
@@ -19,6 +19,7 @@ export type NodeMode = 'full' | 'pruned' | 'light';
 export type NodeStatus = 
   | 'stopped'      // Node arrêté
   | 'starting'     // En cours de démarrage
+  | 'pulling'      // Téléchargement de l'image Docker
   | 'syncing'      // Synchronisation en cours
   | 'ready'        // Prêt et synchronisé
   | 'error'        // Erreur
@@ -48,6 +49,11 @@ export interface NodeState {
   id: string;
   status: NodeStatus;
   syncProgress: number;        // 0-100
+  // Optional, chain-specific sync stage info (e.g. Bitcoin headers vs blocks).
+  syncStage?: string;
+  syncStageProgress?: number;  // 0-100 (within stage)
+  syncStageHeight?: number;
+  syncStageTargetHeight?: number;
   blockHeight: number;
   latestBlock: number;
   peers: number;
@@ -55,6 +61,7 @@ export interface NodeState {
   lastError?: string;
   containerId?: string;
   processId?: number;
+  message?: string;            // Message informatif (ex: "Téléchargement de l'image...")
 }
 
 /** Métriques d'un node */
@@ -93,6 +100,17 @@ export interface NodeLog {
 /** Type de wallet */
 export type WalletType = 'hd' | 'imported' | 'hardware';
 
+export type WalletSecureVersion = 1 | 2;
+
+export interface WalletKdfParamsScrypt {
+  algo: 'scrypt';
+  salt: string; // base64
+  N: number;
+  r: number;
+  p: number;
+  dkLen: number;
+}
+
 /** Configuration d'un wallet */
 export interface WalletConfig {
   id: string;
@@ -105,8 +123,13 @@ export interface WalletConfig {
 
 /** Données sécurisées du wallet (chiffrées) */
 export interface WalletSecureData {
+  version?: WalletSecureVersion;
+  kdf?: WalletKdfParamsScrypt;
+  verifier?: string;          // base64(HMAC-SHA256(key, "wallet-verifier-v2"))
   encryptedSeed?: string;      // Seed chiffrée (BIP39)
   encryptedPrivateKey?: string;
+  encryptedSeedV2?: string;    // base64(iv|authTag|ciphertext) encrypted with password-derived key
+  encryptedPrivateKeyV2?: string;
   publicKey: string;
   address: string;
 }
@@ -183,6 +206,7 @@ export interface CreateWalletRequest {
   name?: string;
   blockchain: BlockchainType;
   importSeed?: string;
+  password?: string;
 }
 
 // ============================================================

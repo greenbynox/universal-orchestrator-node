@@ -6,3 +6,8 @@ frontend/dist/
 electron/
 data/
 coverage/
+
+# Standalone scripts not included in tsconfig.json
+check_registry.ts
+run_migration.ts
+test_node_start.ts

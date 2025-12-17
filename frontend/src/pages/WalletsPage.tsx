@@ -15,6 +15,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useStore } from '../store';
+import { useLanguage } from '../i18n';
 import { walletsApi } from '../services/api';
 import { 
   COMPLETE_BLOCKCHAIN_LIST, 
@@ -34,6 +35,7 @@ interface BitcoinAddressType {
 }
 
 export default function WalletsPage() {
+  const { t } = useLanguage();
   const { wallets, addWallet, removeWallet } = useStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTypeModal, setShowTypeModal] = useState(false);
@@ -92,17 +94,17 @@ export default function WalletsPage() {
 
   const handleCreate = async () => {
     if (!selectedBlockchain) {
-      toast.error('Veuillez sélectionner une blockchain');
+      toast.error(t('wallets.create.selectBlockchain'));
       return;
     }
 
     if (walletPassword.length < 8) {
-      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+      toast.error(t('wallets.create.passwordLength'));
       return;
     }
 
     if (walletPassword !== confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+      toast.error(t('wallets.create.passwordMismatch'));
       return;
     }
 
@@ -120,9 +122,9 @@ export default function WalletsPage() {
       // Afficher directement la seed phrase si elle existe
       if (wallet.mnemonic) {
         setShowSeedModal({ id: wallet.id, seed: wallet.mnemonic });
-        toast.success('Wallet créé! Sauvegardez votre seed phrase!');
+        toast.success(t('wallets.create.successSeed'));
       } else {
-        toast.success('Wallet créé avec succès!');
+        toast.success(t('wallets.create.successSimple'));
       }
       
       setShowCreateModal(false);
@@ -188,12 +190,12 @@ export default function WalletsPage() {
   };
 
   const handleDelete = async (walletId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce wallet ? Cette action est irréversible.')) return;
+    if (!confirm(t('wallets.delete.confirm'))) return;
     
     try {
       await walletsApi.delete(walletId);
       removeWallet(walletId);
-      toast.success('Wallet supprimé');
+      toast.success(t('wallets.delete.success'));
     } catch (error) {
       toast.error((error as Error).message);
     }
@@ -208,7 +210,7 @@ export default function WalletsPage() {
     if (!showPasswordModal) return;
     
     if (!decryptPassword) {
-      toast.error('Veuillez entrer votre mot de passe');
+      toast.error(t('wallets.decrypt.enterPassword'));
       return;
     }
 
@@ -220,7 +222,7 @@ export default function WalletsPage() {
         setDecryptPassword('');
         setShowSeedModal({ id: showPasswordModal, seed });
       } else {
-        toast.error('Seed phrase non disponible');
+        toast.error(t('wallets.decrypt.noSeed'));
       }
     } catch (error) {
       toast.error((error as Error).message);
@@ -231,7 +233,7 @@ export default function WalletsPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('Copié dans le presse-papiers');
+    toast.success(t('wallets.copy.success'));
   };
 
   // Get blockchain info for a wallet
@@ -251,9 +253,9 @@ export default function WalletsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Wallets</h1>
+          <h1 className="text-3xl font-bold text-white">{t('wallets.title')}</h1>
           <p className="text-dark-400 mt-1">
-            {wallets.length} wallet(s) HD • {COMPLETE_BLOCKCHAIN_LIST.length} blockchains supportées
+            {t('wallets.subtitle', { count: wallets.length, chains: COMPLETE_BLOCKCHAIN_LIST.length })}
           </p>
         </div>
         <button
@@ -261,7 +263,7 @@ export default function WalletsPage() {
           className="btn-primary"
         >
           <PlusIcon className="w-5 h-5" />
-          Nouveau Wallet
+          {t('wallets.newWallet')}
         </button>
       </div>
 
@@ -269,10 +271,9 @@ export default function WalletsPage() {
       <div className="bg-green-900/20 border border-green-700/50 rounded-xl p-4 flex items-start gap-3">
         <ShieldCheckIcon className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-green-400 font-medium">Sécurité AES-256-GCM</p>
+          <p className="text-green-400 font-medium">{t('wallets.security.title')}</p>
           <p className="text-dark-300 text-sm mt-1">
-            Vos seed phrases sont chiffrées localement avec votre mot de passe. 
-            Même si quelqu'un accède à vos fichiers, il ne pourra pas lire vos seeds.
+            {t('wallets.security.desc')}
           </p>
         </div>
       </div>
@@ -286,10 +287,10 @@ export default function WalletsPage() {
         >
           <WalletIcon className="w-16 h-16 text-dark-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-white mb-2">
-            Aucun wallet créé
+            {t('wallets.empty.title')}
           </h3>
           <p className="text-dark-400 mb-6">
-            Créez votre premier wallet HD parmi {COMPLETE_BLOCKCHAIN_LIST.length} blockchains en cliquant sur "Nouveau Wallet" ci-dessus
+            {t('wallets.empty.desc', { chains: COMPLETE_BLOCKCHAIN_LIST.length })}
           </p>
         </motion.div>
       ) : (
@@ -327,13 +328,13 @@ export default function WalletsPage() {
                     </div>
                     <div className="flex items-center gap-1 px-2 py-1 bg-green-900/30 rounded text-green-400 text-xs">
                       <LockClosedIcon className="w-3 h-3" />
-                      Chiffré
+                      {t('wallets.encrypted')}
                     </div>
                   </div>
 
                   {/* Adresse */}
                   <div className="bg-dark-900 rounded-lg p-3 mb-4">
-                    <p className="text-xs text-dark-400 mb-1">Adresse</p>
+                    <p className="text-xs text-dark-400 mb-1">{t('wallets.address')}</p>
                     <div className="flex items-center gap-2">
                       <p className="text-sm text-white font-mono truncate flex-1">
                         {wallet.address}
@@ -341,7 +342,7 @@ export default function WalletsPage() {
                       <button
                         onClick={() => copyToClipboard(wallet.address)}
                         className="p-1.5 rounded-lg hover:bg-dark-800 transition-colors"
-                        title="Copier"
+                        title={t('common.copy')}
                       >
                         <ClipboardDocumentIcon className="w-4 h-4 text-dark-400" />
                       </button>
@@ -350,9 +351,9 @@ export default function WalletsPage() {
 
                   {/* Balance - fetched from blockchain */}
                   <div className="bg-dark-900 rounded-lg p-3 mb-4">
-                    <p className="text-xs text-dark-400 mb-1">Solde</p>
+                    <p className="text-xs text-dark-400 mb-1">{t('wallets.balance')}</p>
                     <p className="text-lg font-semibold text-white">
-                      {wallet.balance || 'Chargement...'} {bcInfo.symbol}
+                      {wallet.balance || t('wallets.loading')} {bcInfo.symbol}
                     </p>
                   </div>
 
@@ -363,12 +364,12 @@ export default function WalletsPage() {
                       className="flex-1 btn-secondary text-sm justify-center"
                     >
                       <KeyIcon className="w-4 h-4" />
-                      Voir Seed
+                      {t('wallets.viewSeed')}
                     </button>
                     <button
                       onClick={() => handleDelete(wallet.id)}
                       className="btn-danger text-sm"
-                      title="Supprimer"
+                      title={t('common.delete')}
                     >
                       <TrashIcon className="w-4 h-4" />
                     </button>
@@ -399,7 +400,7 @@ export default function WalletsPage() {
             >
               <div className="bg-dark-800 border border-dark-700 rounded-2xl w-full max-w-lg p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-white">Créer un wallet</h3>
+                  <h3 className="text-xl font-semibold text-white">{t('wallets.type.modalTitle')}</h3>
                   <button onClick={() => setShowTypeModal(false)} className="p-2 rounded-lg hover:bg-dark-700">
                     <XMarkIcon className="w-5 h-5 text-dark-400" />
                   </button>
@@ -412,8 +413,8 @@ export default function WalletsPage() {
                       setShowCreateModal(true);
                     }}
                   >
-                    <div className="font-semibold text-white">Générer une nouvelle Seed (Local)</div>
-                    <p className="text-sm text-dark-400">Seed chiffrée localement avec votre mot de passe.</p>
+                    <div className="font-semibold text-white">{t('wallets.type.generateLocal')}</div>
+                    <p className="text-sm text-dark-400">{t('wallets.type.generateLocalDesc')}</p>
                   </button>
                   <button
                     className="w-full p-4 rounded-xl border-2 border-dark-700 hover:border-primary-500 text-left"
@@ -422,8 +423,8 @@ export default function WalletsPage() {
                       void connectHardware('ledger');
                     }}
                   >
-                    <div className="font-semibold text-white">Ledger Hardware Wallet</div>
-                    <p className="text-sm text-dark-400">Connectez votre Ledger et affichez l'adresse.</p>
+                    <div className="font-semibold text-white">{t('wallets.type.ledger')}</div>
+                    <p className="text-sm text-dark-400">{t('wallets.type.ledgerDesc')}</p>
                   </button>
                   <button
                     className="w-full p-4 rounded-xl border-2 border-dark-700 hover:border-primary-500 text-left"
@@ -432,8 +433,8 @@ export default function WalletsPage() {
                       void connectHardware('trezor');
                     }}
                   >
-                    <div className="font-semibold text-white">Trezor Hardware Wallet</div>
-                    <p className="text-sm text-dark-400">Connectez votre Trezor et affichez l'adresse.</p>
+                    <div className="font-semibold text-white">{t('wallets.type.trezor')}</div>
+                    <p className="text-sm text-dark-400">{t('wallets.type.trezorDesc')}</p>
                   </button>
                 </div>
               </div>
@@ -450,7 +451,7 @@ export default function WalletsPage() {
             <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="bg-dark-800 border border-dark-700 rounded-2xl w-full max-w-md p-6 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">Hardware Wallet</h3>
+                  <h3 className="text-lg font-semibold text-white">{t('wallets.hardware.modalTitle')}</h3>
                   <button onClick={() => { setHardwareStatus(null); setHardwareAddress(null); }} className="p-2 hover:bg-dark-700 rounded">
                     <XMarkIcon className="w-5 h-5 text-dark-400" />
                   </button>
@@ -458,7 +459,7 @@ export default function WalletsPage() {
                 {hardwareStatus && <p className="text-dark-300">{hardwareStatus}</p>}
                 {hardwareAddress && (
                   <div className="bg-dark-900 border border-dark-700 rounded-lg p-3">
-                    <p className="text-xs text-dark-400 mb-1">Adresse détectée</p>
+                    <p className="text-xs text-dark-400 mb-1">{t('wallets.hardware.detectedAddress')}</p>
                     <p className="text-white font-mono break-all">{hardwareAddress}</p>
                   </div>
                 )}
@@ -489,10 +490,10 @@ export default function WalletsPage() {
               >
                 <div className="p-6 border-b border-dark-700">
                   <h2 className="text-xl font-semibold text-white">
-                    Créer un Wallet HD
+                    {t('wallets.create.modalTitle')}
                   </h2>
                   <p className="text-sm text-dark-400 mt-1">
-                    Choisissez parmi {COMPLETE_BLOCKCHAIN_LIST.length} blockchains
+                    {t('wallets.create.chooseBlockchain', { chains: COMPLETE_BLOCKCHAIN_LIST.length })}
                   </p>
                 </div>
 
@@ -501,13 +502,13 @@ export default function WalletsPage() {
                     {/* Nom */}
                     <div>
                       <label className="block text-sm font-medium text-dark-300 mb-2">
-                        Nom du wallet (optionnel)
+                        {t('wallets.create.nameLabel')}
                       </label>
                       <input
                         type="text"
                         value={walletName}
                         onChange={(e) => setWalletName(e.target.value)}
-                        placeholder="Mon wallet..."
+                        placeholder={t('wallets.create.namePlaceholder')}
                         className="input-base"
                       />
                     </div>
@@ -517,7 +518,7 @@ export default function WalletsPage() {
                       <div>
                         <label className="block text-sm font-medium text-dark-300 mb-2">
                           <LockClosedIcon className="w-4 h-4 inline mr-1" />
-                          Mot de passe (min 8 car.)
+                          {t('wallets.create.passwordLabel')}
                         </label>
                         <input
                           type="password"
@@ -529,7 +530,7 @@ export default function WalletsPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-dark-300 mb-2">
-                          Confirmer le mot de passe
+                          {t('wallets.create.confirmLabel')}
                         </label>
                         <input
                           type="password"
@@ -543,14 +544,14 @@ export default function WalletsPage() {
 
                     <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-3 text-sm">
                       <p className="text-yellow-400">
-                        ⚠️ Ce mot de passe chiffre votre seed phrase. Si vous l'oubliez, vous ne pourrez plus accéder à votre seed!
+                        ⚠️ {t('wallets.security.warning')}
                       </p>
                     </div>
 
                     {/* Recherche */}
                     <div>
                       <label className="block text-sm font-medium text-dark-300 mb-2">
-                        Blockchain
+                        {t('wallets.create.searchLabel')}
                       </label>
                       <div className="relative">
                         <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
@@ -558,7 +559,7 @@ export default function WalletsPage() {
                           type="text"
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          placeholder="Rechercher Bitcoin, Ethereum, Solana..."
+                          placeholder={t('wallets.create.searchPlaceholder')}
                           className="input-base pl-10"
                         />
                       </div>
@@ -585,7 +586,7 @@ export default function WalletsPage() {
                         {selectedBlockchain.id === 'bitcoin' && selectedBlockchain.addressTypes && (
                           <div className="mt-4 pt-4 border-t border-primary-500/20">
                             <p className="text-sm font-medium text-dark-300 mb-3">
-                              Type d'adresse Bitcoin
+                              {t('wallets.create.btcAddressType')}
                             </p>
                             <div className="grid grid-cols-2 gap-2">
                               {selectedBlockchain.addressTypes.map((addrType) => (
@@ -691,14 +692,14 @@ export default function WalletsPage() {
                     }}
                     className="flex-1 btn-secondary justify-center"
                   >
-                    Annuler
+                    {t('wallets.create.cancel')}
                   </button>
                   <button
                     onClick={handleCreate}
                     disabled={isCreating || !selectedBlockchain || walletPassword.length < 8 || walletPassword !== confirmPassword}
                     className="flex-1 btn-primary justify-center disabled:opacity-50"
                   >
-                    {isCreating ? 'Création...' : 'Créer le Wallet'}
+                    {isCreating ? t('wallets.create.creating') : t('wallets.create.submit')}
                   </button>
                 </div>
               </motion.div>
@@ -735,16 +736,16 @@ export default function WalletsPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold text-white">
-                      Déchiffrer la Seed
+                      {t('wallets.decrypt.title')}
                     </h2>
-                    <p className="text-sm text-dark-400">Entrez votre mot de passe</p>
+                    <p className="text-sm text-dark-400">{t('wallets.decrypt.subtitle')}</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-dark-300 mb-2">
-                      Mot de passe du wallet
+                      {t('wallets.decrypt.passwordLabel')}
                     </label>
                     <input
                       type="password"
@@ -762,7 +763,7 @@ export default function WalletsPage() {
                     disabled={isDecrypting || !decryptPassword}
                     className="w-full btn-primary justify-center disabled:opacity-50"
                   >
-                    {isDecrypting ? 'Déchiffrement...' : 'Déchiffrer'}
+                    {isDecrypting ? t('wallets.decrypt.decrypting') : t('wallets.decrypt.submit')}
                   </button>
 
                   <button
@@ -772,7 +773,7 @@ export default function WalletsPage() {
                     }}
                     className="w-full btn-secondary justify-center"
                   >
-                    Annuler
+                    {t('wallets.create.cancel')}
                   </button>
                 </div>
               </motion.div>
@@ -806,17 +807,15 @@ export default function WalletsPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold text-white">
-                      Seed Phrase
+                      {t('wallets.seed.title')}
                     </h2>
-                    <p className="text-sm text-dark-400">12 mots de récupération</p>
+                    <p className="text-sm text-dark-400">{t('wallets.seed.subtitle')}</p>
                   </div>
                 </div>
 
                 <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
                   <p className="text-sm text-red-400">
-                    ⚠️ <strong>ATTENTION :</strong> Ne partagez JAMAIS votre seed phrase. 
-                    Quiconque la possède peut accéder à vos fonds. 
-                    Notez-la sur papier et gardez-la en lieu sûr.
+                    ⚠️ <strong>{t('wallets.seed.warning')}</strong>
                   </p>
                 </div>
 
@@ -839,14 +838,14 @@ export default function WalletsPage() {
                   className="w-full btn-secondary justify-center mb-3"
                 >
                   <ClipboardDocumentIcon className="w-5 h-5" />
-                  Copier la Seed Phrase
+                  {t('wallets.seed.copy')}
                 </button>
 
                 <button
                   onClick={() => setShowSeedModal(null)}
                   className="w-full btn-primary justify-center"
                 >
-                  J'ai sauvegardé ma seed
+                  {t('wallets.seed.saved')}
                 </button>
               </motion.div>
             </div>

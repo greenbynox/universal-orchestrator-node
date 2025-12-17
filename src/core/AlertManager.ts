@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { Alert, AlertSeverity, AlertType } from '../types';
 import prisma from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 
 export type AlertHandler = (alert: Alert) => Promise<void> | void;
 
@@ -13,31 +14,53 @@ export class AlertManager extends EventEmitter {
     this.handlers.set(type, [...current, handler]);
   }
 
-  private async persistAlert(alert: Omit<Alert, 'id'>): Promise<Alert> {
-    const created = await prisma.alert.create({
-      data: {
-        type: alert.type,
-        severity: alert.severity,
-        nodeId: alert.nodeId,
-        message: alert.message,
-        timestamp: alert.timestamp,
-        resolved: alert.resolved,
-        resolvedAt: alert.resolvedAt,
-        metadata: alert.metadata ? JSON.stringify(alert.metadata) : undefined,
-      },
-    });
+  private async persistAlert(alert: Omit<Alert, 'id'>): Promise<Alert | null> {
+    try {
+      // Ensure node exists before persisting (avoid FK violations)
+      if (alert.nodeId) {
+        const nodeExists = await prisma.node.findUnique({ where: { id: alert.nodeId } });
+        if (!nodeExists) {
+          logger.warn(`Node ${alert.nodeId} not found for alert ${alert.type}, skipping persistence`);
+          return null;
+        }
+      }
 
-    return {
-      id: created.id,
-      type: created.type as AlertType,
-      severity: created.severity as AlertSeverity,
-      nodeId: created.nodeId || undefined,
-      message: created.message,
-      timestamp: created.timestamp,
-      resolved: created.resolved,
-      resolvedAt: created.resolvedAt || undefined,
-      metadata: created.metadata ? JSON.parse(created.metadata as unknown as string) : undefined,
-    };
+      const created = await prisma.alert.create({
+        data: {
+          type: alert.type,
+          severity: alert.severity,
+          nodeId: alert.nodeId,
+          message: alert.message,
+          timestamp: alert.timestamp,
+          resolved: alert.resolved,
+          resolvedAt: alert.resolvedAt,
+          metadata: alert.metadata ? JSON.stringify(alert.metadata) : undefined,
+        },
+      });
+
+      return {
+        id: created.id,
+        type: created.type as AlertType,
+        severity: created.severity as AlertSeverity,
+        nodeId: created.nodeId || undefined,
+        message: created.message,
+        timestamp: created.timestamp,
+        resolved: created.resolved,
+        resolvedAt: created.resolvedAt || undefined,
+        metadata: created.metadata ? JSON.parse(created.metadata as unknown as string) : undefined,
+      };
+    } catch (error: any) {
+      // Foreign key constraint error - node doesn't exist anymore
+      if (error.code === 'P2003') {
+        logger.warn(`Node ${alert.nodeId} not found for alert ${alert.type}, skipping persistence`, { 
+          error: error.message,
+          nodeId: alert.nodeId 
+        });
+        return null;
+      }
+      // Re-throw other errors
+      throw error;
+    }
   }
 
   async trigger(input: Omit<Alert, 'id' | 'timestamp' | 'resolved'> & { timestamp?: Date; resolved?: boolean }): Promise<Alert> {
@@ -45,48 +68,82 @@ export class AlertManager extends EventEmitter {
     const resolved = input.resolved ?? false;
 
     // Dedup: avoid duplicate unresolved alerts of same type/node
-    const existing = await prisma.alert.findFirst({
-      where: {
-        type: input.type,
-        nodeId: input.nodeId ?? undefined,
-        resolved: false,
-      },
-      orderBy: { timestamp: 'desc' },
-    });
+    try {
+      const existing = await prisma.alert.findFirst({
+        where: {
+          type: input.type,
+          nodeId: input.nodeId ?? undefined,
+          resolved: false,
+        },
+        orderBy: { timestamp: 'desc' },
+      });
 
-    if (existing) {
-      logger.debug(`Alerte déjà existante pour ${input.type} ${input.nodeId ?? ''}`);
-      return {
-        id: existing.id,
-        type: existing.type as AlertType,
-        severity: existing.severity as AlertSeverity,
-        nodeId: existing.nodeId || undefined,
-        message: existing.message,
-        timestamp: existing.timestamp,
-        resolved: existing.resolved,
-        resolvedAt: existing.resolvedAt || undefined,
-        metadata: existing.metadata ? JSON.parse(existing.metadata as unknown as string) : undefined,
-      };
+      if (existing) {
+        logger.debug(`Alerte déjà existante pour ${input.type} ${input.nodeId ?? ''}`);
+        return {
+          id: existing.id,
+          type: existing.type as AlertType,
+          severity: existing.severity as AlertSeverity,
+          nodeId: existing.nodeId || undefined,
+          message: existing.message,
+          timestamp: existing.timestamp,
+          resolved: existing.resolved,
+          resolvedAt: existing.resolvedAt || undefined,
+          metadata: existing.metadata ? JSON.parse(existing.metadata as unknown as string) : undefined,
+        };
+      }
+    } catch (error: any) {
+      logger.warn('Error checking existing alerts', { error: error.message });
+      // Continue anyway
     }
 
-    const alert = await this.persistAlert({
+    // Try to persist, but don't fail if node doesn't exist
+    const persistedAlert = await this.persistAlert({
       ...input,
       timestamp,
       resolved,
     });
 
+    // If we couldn't persist (FK error), create a in-memory alert to emit anyway
+    const alert = persistedAlert || {
+      id: `temp-${Date.now()}-${Math.random()}`,
+      type: input.type,
+      severity: input.severity,
+      nodeId: input.nodeId,
+      message: input.message,
+      timestamp,
+      resolved,
+      resolvedAt: input.resolvedAt,
+      metadata: input.metadata,
+    };
+
     this.emit('alert', alert);
 
+    // Filtrage par sévérité minimale
+    const normalize = (s: string): AlertSeverity => {
+      const v = s.toLowerCase();
+      if (v === 'info') return 'INFO';
+      if (v === 'critical') return 'CRITICAL';
+      return 'WARNING';
+    };
+
+    const minSeverity = normalize(config.alerts.minSeverity || 'WARNING');
+    const severityOrder: Record<AlertSeverity, number> = { INFO: 1, WARNING: 2, CRITICAL: 3 } as const;
     const handlers = this.handlers.get(alert.type) || [];
-    await Promise.allSettled(
-      handlers.map(async (handler) => {
-        try {
-          await handler(alert);
-        } catch (error) {
-          logger.error('Erreur dans handler d\'alerte', { error });
-        }
-      })
-    );
+
+    if (severityOrder[alert.severity] >= severityOrder[minSeverity]) {
+      await Promise.allSettled(
+        handlers.map(async (handler) => {
+          try {
+            await handler(alert);
+          } catch (error) {
+            logger.error('Erreur dans handler d\'alerte', { error });
+          }
+        })
+      );
+    } else {
+      logger.debug('Alerte ignorée (sous le seuil minimal)', { alertType: alert.type, severity: alert.severity, minSeverity });
+    }
 
     return alert;
   }

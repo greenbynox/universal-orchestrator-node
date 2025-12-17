@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import { useStore } from '../store';
+import { useLanguage } from '../i18n';
 import NodeCard from '../components/NodeCard';
 import ResourceEstimateModal from '../components/ResourceEstimateModal';
 import { BlockchainType, BLOCKCHAIN_NAMES, NodeStatus, NodeMode } from '../types';
 
 export default function NodesPage() {
+  const { t } = useLanguage();
   const { nodes } = useStore();
   const [showEstimateModal, setShowEstimateModal] = useState(false);
   const [filterBlockchain, setFilterBlockchain] = useState<BlockchainType | 'all'>('all');
@@ -28,9 +30,9 @@ export default function NodesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Nodes</h1>
+          <h1 className="text-3xl font-bold text-white">{t('nodes.title')}</h1>
           <p className="text-dark-400 mt-1">
-            {nodes.length} node(s) • {filteredNodes.length} affiché(s)
+            {t('nodes.countSummary', { shown: filteredNodes.length, total: nodes.length })}
           </p>
         </div>
         <button
@@ -38,7 +40,7 @@ export default function NodesPage() {
           className="btn-primary"
         >
           <PlusIcon className="w-5 h-5" />
-          Nouveau Node
+          {t('nodes.addNew')}
         </button>
       </div>
 
@@ -47,13 +49,13 @@ export default function NodesPage() {
         <FunnelIcon className="w-5 h-5 text-dark-400" />
         
         <div className="flex items-center gap-2">
-          <span className="text-sm text-dark-400">Blockchain:</span>
+          <span className="text-sm text-dark-400">{t('nodes.filter.blockchain')}</span>
           <select
             value={filterBlockchain}
             onChange={(e) => setFilterBlockchain(e.target.value as BlockchainType | 'all')}
             className="select-base w-auto"
           >
-            <option value="all">Toutes</option>
+            <option value="all">{t('nodes.filter.all')}</option>
             {Object.entries(BLOCKCHAIN_NAMES).map(([key, name]) => (
               <option key={key} value={key}>{name}</option>
             ))}
@@ -61,17 +63,17 @@ export default function NodesPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-dark-400">Statut:</span>
+          <span className="text-sm text-dark-400">{t('nodes.filter.status')}</span>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as NodeStatus | 'all')}
             className="select-base w-auto"
           >
-            <option value="all">Tous</option>
-            <option value="ready">Prêt</option>
-            <option value="syncing">Sync</option>
-            <option value="stopped">Arrêté</option>
-            <option value="error">Erreur</option>
+            <option value="all">{t('nodes.filter.allStatus')}</option>
+            <option value="ready">{t('nodes.status.ready')}</option>
+            <option value="syncing">{t('nodes.status.syncing')}</option>
+            <option value="stopped">{t('nodes.status.stopped')}</option>
+            <option value="error">{t('nodes.status.error')}</option>
           </select>
         </div>
 
@@ -83,7 +85,7 @@ export default function NodesPage() {
             }}
             className="text-sm text-primary-500 hover:text-primary-400"
           >
-            Réinitialiser
+            {t('nodes.resetFilters')}
           </button>
         )}
       </div>
@@ -97,8 +99,8 @@ export default function NodesPage() {
         >
           <p className="text-dark-400">
             {nodes.length === 0
-              ? 'Aucun node créé. Cliquez sur "Nouveau Node" pour commencer.'
-              : 'Aucun node ne correspond aux filtres sélectionnés.'}
+              ? t('nodes.empty.noNodes')
+              : t('nodes.empty.noMatch')}
           </p>
         </motion.div>
       ) : (

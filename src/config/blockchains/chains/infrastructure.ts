@@ -294,4 +294,63 @@ export const INFRASTRUCTURE_CHAINS: BlockchainDefinition[] = [
     coingeckoId: 'sei-network',
     isActive: true,
   },
+  // ============================================================
+  // ETHEREUM NAME SERVICE
+  // ============================================================
+  createEVMChain({
+    id: 'ens',
+    name: 'Ethereum Name Service',
+    symbol: 'ENS',
+    category: 'infrastructure',
+    consensus: 'other',
+    color: '#5298FF',
+    chainId: 1,
+    mainnet: {
+      name: 'ENS (Ethereum)',
+      rpcUrls: ['https://eth.llamarpc.com'],
+    },
+    website: 'https://ens.domains',
+    coingeckoId: 'ethereum-name-service',
+    isActive: true,
+  }),
+
+  // ============================================================
+  // SSV NETWORK
+  // ============================================================
+  createEVMChain({
+    id: 'ssv',
+    name: 'SSV Network',
+    symbol: 'SSV',
+    category: 'infrastructure',
+    consensus: 'other',
+    color: '#111111',
+    chainId: 1,
+    mainnet: {
+      name: 'SSV (Ethereum)',
+      rpcUrls: ['https://eth.llamarpc.com'],
+    },
+    website: 'https://ssv.network',
+    coingeckoId: 'ssv-network',
+    isActive: true,
+  }),
+
+  // ============================================================
+  // ALTLAYER
+  // ============================================================
+  createEVMChain({
+    id: 'altlayer',
+    name: 'AltLayer',
+    symbol: 'ALT',
+    category: 'infrastructure',
+    consensus: 'other',
+    color: '#6452F6',
+    chainId: 1,
+    mainnet: {
+      name: 'ALT (Ethereum)',
+      rpcUrls: ['https://eth.llamarpc.com'],
+    },
+    website: 'https://altlayer.io',
+    coingeckoId: 'altlayer',
+    isActive: true,
+  }),
 ];

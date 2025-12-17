@@ -14,7 +14,7 @@ export type MajorBlockchainType =
 export type BlockchainType = MajorBlockchainType | string;
 
 export type NodeMode = 'full' | 'pruned' | 'light';
-export type NodeStatus = 'stopped' | 'starting' | 'syncing' | 'ready' | 'error' | 'stopping';
+export type NodeStatus = 'stopped' | 'starting' | 'pulling' | 'syncing' | 'ready' | 'error' | 'stopping';
 
 // 100% GRATUIT - Aucune limite sur le nombre de nodes
 // Pas de plans d'abonnement, pas de paiements
@@ -40,12 +40,18 @@ export interface NodeState {
   id?: string;
   status: NodeStatus;
   syncProgress: number;
+  // Optional, chain-specific sync stage info (e.g. Bitcoin headers vs blocks).
+  syncStage?: string;
+  syncStageProgress?: number;
+  syncStageHeight?: number;
+  syncStageTargetHeight?: number;
   blockHeight: number;
   latestBlock: number;
   peers: number;
   uptime?: number;
   lastError?: string | null;
   containerId?: string;
+  message?: string;            // Message informatif (ex: "Téléchargement de l'image...")
 }
 
 export interface NodeMetrics {
@@ -63,6 +69,28 @@ export interface NodeInfo {
   config: NodeConfig;
   state: NodeState;
   metrics: NodeMetrics;
+}
+
+export interface NodeRpcAuth {
+  username: string;
+  password: string;
+}
+
+export interface NodeConnectionInfo {
+  nodeId: string;
+  blockchain: string;
+  rpcUrl: string;
+  wsUrl?: string;
+  p2pPort: number;
+  localOnly: boolean;
+  rpcAuth?: NodeRpcAuth;
+}
+
+export interface NodeRpcTestResult {
+  ok: boolean;
+  rpcUrl?: string;
+  latencyMs?: number;
+  error?: string;
 }
 
 export interface WalletInfo {

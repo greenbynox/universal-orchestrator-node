@@ -208,9 +208,34 @@ export function createEVMChain(
     derivationPath?: string;
   }
 ): BlockchainDefinition {
+  // Default requirements for EVM chains
+  const defaultRequirements = {
+    light: { diskGB: 50, memoryGB: 4, syncDays: 1 },
+    pruned: { diskGB: 100, memoryGB: 8, syncDays: 3 },
+    full: { diskGB: 500, memoryGB: 16, syncDays: 7 },
+    archive: { diskGB: 2000, memoryGB: 32, syncDays: 14 },
+  };
+
+  // Merge provided docker config with defaults
+  const dockerConfig = config.docker || {
+    images: {
+      full: 'ethereum/client-go:stable', // Generic fallback
+    },
+    requirements: defaultRequirements
+  };
+  
+  // Ensure requirements exist
+  if (!dockerConfig.requirements) {
+    dockerConfig.requirements = defaultRequirements;
+  } else {
+    // Fill missing modes
+    dockerConfig.requirements = { ...defaultRequirements, ...dockerConfig.requirements };
+  }
+
   return {
     ...config,
     chainType: 'evm',
+    docker: dockerConfig,
     wallet: {
       derivationPath: config.derivationPath || "m/44'/60'/0'/0/0",
       addressPrefix: '0x',

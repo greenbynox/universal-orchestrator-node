@@ -148,6 +148,8 @@ jobs:
       - build-windows
       - build-linux
       - build-macos
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -165,7 +167,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          draft: true
+          draft: false
+          generate_release_notes: true
           files: |
             dist-artifacts/windows-artifacts/*.exe
             dist-artifacts/windows-artifacts/*.blockmap

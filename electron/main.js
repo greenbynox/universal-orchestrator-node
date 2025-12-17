@@ -18,6 +18,14 @@ const isDev = process.env.NODE_ENV === 'development';
 const isDevMode = isDev && !app.isPackaged;
 const BACKEND_PORT = 3001;
 const FRONTEND_PORT = isDev ? 5173 : 3001;
+const DOCKER_AUTO_START = process.env.DOCKER_AUTO_START !== 'false';
+const DOCKER_MAX_RETRIES = Number(process.env.DOCKER_MAX_RETRIES || 30);
+const DOCKER_RETRY_DELAY_MS = Number(process.env.DOCKER_RETRY_DELAY_MS || 4000);
+// Windows strategy:
+// - Prefer WSL2 Docker Engine when WSL is available.
+// - Only fall back to Docker Desktop if explicitly allowed.
+const DOCKER_PREFER_WSL2 = process.env.DOCKER_PREFER_WSL2 !== 'false';
+const DOCKER_ALLOW_DESKTOP_FALLBACK = process.env.DOCKER_ALLOW_DESKTOP_FALLBACK !== 'false';
 
 let mainWindow = null;
 let splashWindow = null;
@@ -234,6 +242,263 @@ function createTray() {
 }
 
 // ============================================================
+// DOCKER - Auto-launch
+// ============================================================
+
+/**
+ * Ensure Docker is running.
+ * Windows:
+ * - Prefer Docker already available.
+ * - If not, try Docker Engine in WSL2 (no Docker Desktop required).
+ * - Fallback: try launching Docker Desktop if present.
+ */
+function ensureDockerIsRunning() {
+  return new Promise((resolve) => {
+    const { spawn } = require('child_process');
+    const os = require('os');
+
+    const hasWslExe = () => {
+      if (process.platform !== 'win32') return false;
+      const sysRoot = process.env.SystemRoot || 'C:\\Windows';
+      const wslPath = path.join(sysRoot, 'System32', 'wsl.exe');
+      return fs.existsSync(wslPath);
+    };
+
+    console.log('[Docker] Checking if Docker is running...');
+    updateSplashProgress('docker', 'Vérification de Docker...', 'pending', 5);
+
+    if (!DOCKER_AUTO_START) {
+      console.warn('[Docker] DOCKER_AUTO_START=false, skipping auto-launch');
+      updateSplashProgress('docker', 'Docker non démarré automatiquement (config)', 'warning', 8);
+      resolve();
+      return;
+    }
+
+    const testDockerCli = (cb) => {
+      try {
+        const child = spawn('docker', ['info'], { stdio: 'ignore', windowsHide: true });
+        let done = false;
+
+        const finish = (ok) => {
+          if (done) return;
+          done = true;
+          try { child.kill(); } catch { /* ignore */ }
+          cb(ok);
+        };
+
+        const timer = setTimeout(() => finish(false), 2500);
+
+        child.on('exit', (code) => {
+          clearTimeout(timer);
+          finish(code === 0);
+        });
+        child.on('error', () => {
+          clearTimeout(timer);
+          finish(false);
+        });
+      } catch {
+        cb(false);
+      }
+    };
+
+    const testDockerWsl = (cb) => {
+      if (process.platform !== 'win32') return cb(false);
+      try {
+        const child = spawn('wsl.exe', ['-e', 'sh', '-lc', 'docker info >/dev/null 2>&1'], { stdio: 'ignore', windowsHide: true });
+        let done = false;
+
+        const finish = (ok) => {
+          if (done) return;
+          done = true;
+          try { child.kill(); } catch { /* ignore */ }
+          cb(ok);
+        };
+
+        // WSL boot + systemd + docker may take a few seconds.
+        const timer = setTimeout(() => finish(false), 12000);
+        child.on('exit', (code) => {
+          clearTimeout(timer);
+          finish(code === 0);
+        });
+        child.on('error', () => {
+          clearTimeout(timer);
+          finish(false);
+        });
+      } catch {
+        cb(false);
+      }
+    };
+
+    const warmupWsl = (cb) => {
+      if (process.platform !== 'win32') return cb();
+      try {
+        const child = spawn('wsl.exe', ['-e', 'sh', '-lc', 'true'], { stdio: 'ignore', windowsHide: true });
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          try { child.kill(); } catch { /* ignore */ }
+          cb();
+        };
+        const timer = setTimeout(() => finish(), 8000);
+        child.on('exit', () => {
+          clearTimeout(timer);
+          finish();
+        });
+        child.on('error', () => {
+          clearTimeout(timer);
+          finish();
+        });
+      } catch {
+        cb();
+      }
+    };
+
+    const testDockerReady = (attempts) => {
+      if (attempts >= DOCKER_MAX_RETRIES) {
+        console.warn('[Docker] Docker did not become ready in time, continuing anyway');
+        updateSplashProgress('docker', 'Docker non disponible, continuation...', 'warning', 8);
+        resolve();
+        return;
+      }
+
+      // Prefer checking native Docker CLI first, then WSL2 docker.
+      testDockerCli((ok) => {
+        if (ok) {
+          console.log('[Docker] Docker is now ready!');
+          updateSplashProgress('docker', 'Docker est opérationnel', 'success', 8);
+          resolve();
+          return;
+        }
+
+        testDockerWsl((wslOk) => {
+          if (wslOk) {
+            console.log('[Docker] Docker Engine in WSL2 is now ready!');
+            updateSplashProgress('docker', 'Docker (WSL2) est opérationnel', 'success', 8);
+            resolve();
+            return;
+          }
+
+          setTimeout(() => testDockerReady(attempts + 1), DOCKER_RETRY_DELAY_MS);
+        });
+      });
+    };
+
+    // Test if Docker is accessible
+    const testDocker = () => {
+      testDockerCli((ok) => {
+        if (ok) {
+          console.log('[Docker] Docker is already running');
+          updateSplashProgress('docker', 'Docker est opérationnel', 'success', 8);
+          resolve();
+          return;
+        }
+
+        // Windows: prefer WSL2 Docker Engine when available.
+        if (process.platform === 'win32' && DOCKER_PREFER_WSL2 && hasWslExe()) {
+          updateSplashProgress('docker', 'Démarrage de Docker (WSL2)...', 'pending', 7);
+          warmupWsl(() => {
+            // Give WSL2 a chance to boot/systemd-start docker in background.
+            testDockerReady(0);
+          });
+          return;
+        }
+
+        // Fallback path: try WSL quick check, then Docker Desktop.
+        testDockerWsl((wslOk) => {
+          if (wslOk) {
+            console.log('[Docker] Docker Engine in WSL2 is running');
+            updateSplashProgress('docker', 'Docker (WSL2) est opérationnel', 'success', 8);
+            resolve();
+            return;
+          }
+          launchDocker();
+        });
+      });
+    };
+
+    const launchDocker = () => {
+      if (process.platform === 'win32' && !DOCKER_ALLOW_DESKTOP_FALLBACK) {
+        console.warn('[Docker] Docker Desktop fallback disabled; continuing without auto-launch');
+        updateSplashProgress('docker', 'Docker Desktop désactivé (fallback) — continuation...', 'warning', 8);
+        resolve();
+        return;
+      }
+
+      console.log('[Docker] Attempting to launch Docker Desktop...');
+      updateSplashProgress('docker', 'Lancement de Docker Desktop...', 'pending', 6);
+
+      if (process.platform === 'win32') {
+        // Windows
+        try {
+          const dockerPaths = [
+            'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe',
+            process.env.ProgramFiles + '\\Docker\\Docker\\Docker Desktop.exe',
+            process.env['ProgramFiles(x86)'] + '\\Docker\\Docker\\Docker Desktop.exe',
+          ];
+
+          let found = false;
+          for (const dockerPath of dockerPaths) {
+            if (fs.existsSync(dockerPath)) {
+              console.log('[Docker] Found Docker at:', dockerPath);
+              spawn(dockerPath, [], { detached: true, stdio: 'ignore' });
+              found = true;
+              break;
+            }
+          }
+
+          if (found) {
+            console.log('[Docker] Waiting for Docker to start (15 seconds)...');
+            updateSplashProgress('docker', 'Attente du démarrage de Docker...', 'pending', 7);
+            
+            // Wait for Docker to be ready
+            setTimeout(() => {
+              testDockerReady(0);
+            }, 15000);
+          } else {
+            console.warn('[Docker] Docker Desktop not found in common locations');
+            updateSplashProgress('docker', 'Docker Desktop non trouvé (essayez WSL2 Engine)', 'warning', 8);
+            resolve(); // Continue anyway
+          }
+        } catch (error) {
+          console.error('[Docker] Error launching Docker:', error);
+          updateSplashProgress('docker', 'Erreur au lancement de Docker', 'warning', 8);
+          resolve(); // Continue anyway
+        }
+      } else if (process.platform === 'darwin') {
+        // macOS
+        try {
+          const dockerPath = '/Applications/Docker.app/Contents/MacOS/Docker';
+          if (fs.existsSync(dockerPath)) {
+            console.log('[Docker] Launching Docker on macOS...');
+            spawn(dockerPath, [], { detached: true, stdio: 'ignore' });
+            
+            setTimeout(() => {
+              testDockerReady(0);
+            }, 15000);
+          } else {
+            console.warn('[Docker] Docker not found on macOS');
+            updateSplashProgress('docker', 'Docker non trouvé', 'warning', 8);
+            resolve();
+          }
+        } catch (error) {
+          console.error('[Docker] Error launching Docker on macOS:', error);
+          updateSplashProgress('docker', 'Erreur au lancement', 'warning', 8);
+          resolve();
+        }
+      } else if (process.platform === 'linux') {
+        // Linux - Docker typically runs as a service
+        console.log('[Docker] Linux detected - Docker should be running as service');
+        updateSplashProgress('docker', 'Linux: vérification du service Docker', 'pending', 7);
+        testDockerReady(0);
+      }
+    };
+
+    testDocker();
+  });
+}
+
+// ============================================================
 // BACKEND SERVER - Embedded Express
 // ============================================================
 
@@ -270,10 +535,15 @@ function startBackend() {
       updateSplashProgress('data', 'Préparation des données locales...', 'success', 25);
       updateSplashProgress('deps', 'Chargement des dépendances...', 'pending', 30);
 
-      // Use simplified embedded server
-      const serverPath = path.join(__dirname, 'start-server.js');
-      console.log('[Backend] Server path:', serverPath);
-      console.log('[Backend] Server exists:', fs.existsSync(serverPath));
+      // Prefer the real backend (compiled TS server) so the packaged app uses the same
+      // security posture (auth/CORS/CSP/rate-limits) as the standalone server.
+      // Keep the legacy embedded server as a fallback for unbuilt/dev environments.
+      const distServerPath = path.join(__dirname, '..', 'dist', 'server.js');
+      const legacyEmbeddedPath = path.join(__dirname, 'start-server.js');
+      const serverPath = fs.existsSync(distServerPath) ? distServerPath : legacyEmbeddedPath;
+      console.log('[Backend] Server entry:', serverPath);
+      console.log('[Backend] dist server exists:', fs.existsSync(distServerPath));
+      console.log('[Backend] legacy embedded exists:', fs.existsSync(legacyEmbeddedPath));
       
       updateSplashProgress('deps', 'Chargement des dépendances...', 'success', 35);
       updateSplashProgress('server-init', 'Initialisation du serveur Express...', 'pending', 40);
@@ -526,6 +796,14 @@ app.whenReady().then(async () => {
   createSplashWindow();
 
   try {
+    // Start Docker in the background (non-blocking).
+    // The backend can start in degraded mode and will connect when Docker is ready.
+    try {
+      void ensureDockerIsRunning();
+    } catch (e) {
+      console.warn('[Docker] Background startup failed:', e);
+    }
+
     // Start backend server
     await startBackend();
 

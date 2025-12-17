@@ -12,6 +12,7 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../utils/logger';
+import { getNodeSupportedModes, isNodeModeSupported } from './nodeSupport';
 import { blockchainRegistry } from '../config/blockchains';
 import { BlockchainType, NodeMode } from '../types';
 
@@ -37,6 +38,7 @@ function generateDockerImageWhitelist(): Set<string> {
     'solanalabs/solana:latest',
     'parity/polkadot:latest',
     'inputoutput/cardano-node:latest',
+    'cosmos/gaia:latest',
   ];
   
   commonImages.forEach(img => whitelist.add(img));
@@ -80,6 +82,7 @@ export const DOCKER_IMAGE_PATTERNS: RegExp[] = [
   /^solanalabs\/solana:v?\d+\.\d+(\.\d+)?$/,
   /^parity\/polkadot:v?\d+\.\d+(\.\d+)?$/,
   /^inputoutput\/cardano-node:\d+\.\d+(\.\d+)?$/,
+  /^cosmos\/gaia:v?\d+\.\d+(\.\d+)?$/,
 ];
 
 // ============================================================
@@ -160,26 +163,8 @@ export function getValidatedDockerImage(blockchain: BlockchainType, mode: NodeMo
     throw new Error(`Blockchain non supportée: ${blockchain}`);
   }
   
-  // Si la blockchain n'a pas de config docker, fournir des defaults intelligents
-  if (!chain.docker) {
-    // Pour les chains EVM, utiliser geth (compatible avec toutes les EVM chains)
-    if (chain.chainType === 'evm') {
-      const defaultImages: Record<NodeMode, string> = {
-        full: 'ethereum/client-go:latest',
-        pruned: 'ethereum/client-go:latest',
-        light: 'ethereum/client-go:latest',
-      };
-      
-      const image = defaultImages[mode];
-      
-      // Valider que l'image est dans la whitelist
-      validateDockerImage(image);
-      
-      return image;
-    }
-    
-    // Pour les autres types, il faut une config docker explicite
-    throw new Error(`Blockchain non supportée: ${blockchain}`);
+  if (!chain.docker?.images) {
+    throw new Error(`Blockchain non supportée en tant que node: ${blockchain}`);
   }
   
   const image = chain.docker.images[mode];
@@ -469,14 +454,26 @@ export function validateCreateNodeRequest(request: {
   p2pPort?: number;
   wsPort?: number;
 } {
-  // Valider le nom
-  const name = sanitizeNodeName(request.name || '');
-  
   // Valider la blockchain
   const blockchain = validateBlockchainType(request.blockchain || '');
-  
-  // Valider le mode
-  const mode = validateNodeMode(request.mode || 'pruned');
+
+  // Déterminer le mode (si non fourni, choisir un défaut supporté pour éviter de créer un node invalide)
+  const supported = getNodeSupportedModes(blockchain);
+  const requestedMode = request.mode ? validateNodeMode(request.mode) : undefined;
+  const mode: NodeMode = requestedMode
+    || (supported.includes('pruned') ? 'pruned' : supported.includes('full') ? 'full' : supported.includes('light') ? 'light' : 'pruned');
+
+  // Valider que cette blockchain/mode est réellement supportée par l'orchestrateur
+  if (!isNodeModeSupported(blockchain, mode)) {
+    const supportedText = supported.length ? supported.join(', ') : 'aucun';
+    throw new Error(
+      `Blockchain "${blockchain}" non supportée pour l'orchestration en mode "${mode}". Modes supportés: ${supportedText}`
+    );
+  }
+
+  // Valider le nom (optionnel). Si aucun nom fourni, on génère un nom par défaut.
+  const defaultName = `${blockchain.charAt(0).toUpperCase()}${blockchain.slice(1)} Node`;
+  const name = request.name ? sanitizeNodeName(request.name) : defaultName;
   
   // Valider l'image Docker associée
   getValidatedDockerImage(blockchain, mode);

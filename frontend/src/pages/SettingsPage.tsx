@@ -8,133 +8,164 @@ import {
   CheckIcon,
   GlobeAltIcon,
 } from '@heroicons/react/24/outline';
-import { systemApi } from '../services/api';
+import { settingsApi, systemApi } from '../services/api';
+import { useLanguage } from '../i18n';
+import { DONATION_NETWORKS, type DonationNetwork } from '../config/donations';
 
-// Donation networks (100+ crypto networks)
-const DONATION_NETWORKS = [
-  // Major Networks
-  { id: 'btc', name: 'Bitcoin', symbol: 'BTC', address: '', icon: '₿' },
-  { id: 'eth', name: 'Ethereum', symbol: 'ETH', address: '', icon: 'Ξ' },
-  { id: 'sol', name: 'Solana', symbol: 'SOL', address: '', icon: '◎' },
-  { id: 'bnb', name: 'BNB Chain', symbol: 'BNB', address: '', icon: '⬡' },
-  { id: 'xmr', name: 'Monero', symbol: 'XMR', address: '', icon: 'ɱ' },
-  { id: 'ada', name: 'Cardano', symbol: 'ADA', address: '', icon: '₳' },
-  { id: 'dot', name: 'Polkadot', symbol: 'DOT', address: '', icon: '●' },
-  { id: 'avax', name: 'Avalanche', symbol: 'AVAX', address: '', icon: '🔺' },
-  { id: 'matic', name: 'Polygon', symbol: 'MATIC', address: '', icon: '⬡' },
-  { id: 'atom', name: 'Cosmos', symbol: 'ATOM', address: '', icon: '⚛' },
-  // Layer 2s
-  { id: 'arb', name: 'Arbitrum', symbol: 'ARB', address: '', icon: '🔵' },
-  { id: 'op', name: 'Optimism', symbol: 'OP', address: '', icon: '🔴' },
-  { id: 'base', name: 'Base', symbol: 'ETH', address: '', icon: '🔵' },
-  { id: 'zksync', name: 'zkSync Era', symbol: 'ETH', address: '', icon: '⚡' },
-  { id: 'linea', name: 'Linea', symbol: 'ETH', address: '', icon: '📐' },
-  { id: 'scroll', name: 'Scroll', symbol: 'ETH', address: '', icon: '📜' },
-  { id: 'manta', name: 'Manta Pacific', symbol: 'ETH', address: '', icon: '🐋' },
-  { id: 'blast', name: 'Blast', symbol: 'ETH', address: '', icon: '💥' },
-  { id: 'mode', name: 'Mode', symbol: 'ETH', address: '', icon: 'Ⓜ' },
-  { id: 'mantle', name: 'Mantle', symbol: 'MNT', address: '', icon: '🏔' },
-  // EVM Chains
-  { id: 'ftm', name: 'Fantom', symbol: 'FTM', address: '', icon: '👻' },
-  { id: 'cro', name: 'Cronos', symbol: 'CRO', address: '', icon: '🔷' },
-  { id: 'one', name: 'Harmony', symbol: 'ONE', address: '', icon: '🎵' },
-  { id: 'klay', name: 'Klaytn', symbol: 'KLAY', address: '', icon: '🔶' },
-  { id: 'celo', name: 'Celo', symbol: 'CELO', address: '', icon: '🌿' },
-  { id: 'aurora', name: 'Aurora', symbol: 'ETH', address: '', icon: '🌈' },
-  { id: 'moonbeam', name: 'Moonbeam', symbol: 'GLMR', address: '', icon: '🌙' },
-  { id: 'moonriver', name: 'Moonriver', symbol: 'MOVR', address: '', icon: '🌊' },
-  { id: 'metis', name: 'Metis', symbol: 'METIS', address: '', icon: '🟢' },
-  { id: 'boba', name: 'Boba', symbol: 'BOBA', address: '', icon: '🧋' },
-  { id: 'evmos', name: 'Evmos', symbol: 'EVMOS', address: '', icon: '⚛' },
-  { id: 'kava', name: 'Kava', symbol: 'KAVA', address: '', icon: '🔥' },
-  { id: 'gnosis', name: 'Gnosis', symbol: 'xDAI', address: '', icon: '🦉' },
-  { id: 'fuse', name: 'Fuse', symbol: 'FUSE', address: '', icon: '⚡' },
-  // Privacy Coins
-  { id: 'zec', name: 'Zcash', symbol: 'ZEC', address: '', icon: '🛡' },
-  { id: 'dash', name: 'Dash', symbol: 'DASH', address: '', icon: '💨' },
-  { id: 'firo', name: 'Firo', symbol: 'FIRO', address: '', icon: '🔥' },
-  { id: 'beam', name: 'Beam', symbol: 'BEAM', address: '', icon: '📡' },
-  { id: 'zen', name: 'Horizen', symbol: 'ZEN', address: '', icon: '☯' },
-  // Bitcoin Forks & Layer 2
-  { id: 'ltc', name: 'Litecoin', symbol: 'LTC', address: '', icon: 'Ł' },
-  { id: 'bch', name: 'Bitcoin Cash', symbol: 'BCH', address: '', icon: '₿' },
-  { id: 'doge', name: 'Dogecoin', symbol: 'DOGE', address: '', icon: '🐕' },
-  { id: 'dcr', name: 'Decred', symbol: 'DCR', address: '', icon: '⚡' },
-  { id: 'stx', name: 'Stacks', symbol: 'STX', address: '', icon: '📚' },
-  // Cosmos Ecosystem
-  { id: 'osmo', name: 'Osmosis', symbol: 'OSMO', address: '', icon: '🧪' },
-  { id: 'juno', name: 'Juno', symbol: 'JUNO', address: '', icon: '🌌' },
-  { id: 'inj', name: 'Injective', symbol: 'INJ', address: '', icon: '💉' },
-  { id: 'sei', name: 'Sei', symbol: 'SEI', address: '', icon: '🌊' },
-  { id: 'dym', name: 'Dymension', symbol: 'DYM', address: '', icon: '🎲' },
-  { id: 'tia', name: 'Celestia', symbol: 'TIA', address: '', icon: '☀' },
-  // Solana Ecosystem
-  { id: 'ray', name: 'Raydium', symbol: 'RAY', address: '', icon: '☀' },
-  { id: 'jup', name: 'Jupiter', symbol: 'JUP', address: '', icon: '🪐' },
-  // Other Major
-  { id: 'near', name: 'NEAR', symbol: 'NEAR', address: '', icon: 'Ⓝ' },
-  { id: 'apt', name: 'Aptos', symbol: 'APT', address: '', icon: '🌀' },
-  { id: 'sui', name: 'Sui', symbol: 'SUI', address: '', icon: '💧' },
-  { id: 'algo', name: 'Algorand', symbol: 'ALGO', address: '', icon: 'Ⱥ' },
-  { id: 'xlm', name: 'Stellar', symbol: 'XLM', address: '', icon: '✦' },
-  { id: 'xrp', name: 'XRP', symbol: 'XRP', address: '', icon: '✕' },
-  { id: 'hbar', name: 'Hedera', symbol: 'HBAR', address: '', icon: 'ℏ' },
-  { id: 'xtz', name: 'Tezos', symbol: 'XTZ', address: '', icon: 'ꜩ' },
-  { id: 'icp', name: 'Internet Computer', symbol: 'ICP', address: '', icon: '∞' },
-  { id: 'fil', name: 'Filecoin', symbol: 'FIL', address: '', icon: '⬡' },
-  { id: 'ar', name: 'Arweave', symbol: 'AR', address: '', icon: '📦' },
-  { id: 'vet', name: 'VeChain', symbol: 'VET', address: '', icon: '✓' },
-  { id: 'egld', name: 'MultiversX', symbol: 'EGLD', address: '', icon: 'ⓧ' },
-  { id: 'theta', name: 'Theta', symbol: 'THETA', address: '', icon: 'θ' },
-  { id: 'trx', name: 'Tron', symbol: 'TRX', address: '', icon: '⟁' },
-  { id: 'eos', name: 'EOS', symbol: 'EOS', address: '', icon: '◎' },
-  { id: 'neo', name: 'NEO', symbol: 'NEO', address: '', icon: '◇' },
-  { id: 'waves', name: 'Waves', symbol: 'WAVES', address: '', icon: '〰' },
-  { id: 'ton', name: 'TON', symbol: 'TON', address: '', icon: '💎' },
-  // Stablecoins (for convenience)
-  { id: 'usdt-eth', name: 'USDT (Ethereum)', symbol: 'USDT', address: '', icon: '💵' },
-  { id: 'usdt-tron', name: 'USDT (Tron)', symbol: 'USDT', address: '', icon: '💵' },
-  { id: 'usdt-bsc', name: 'USDT (BSC)', symbol: 'USDT', address: '', icon: '💵' },
-  { id: 'usdt-sol', name: 'USDT (Solana)', symbol: 'USDT', address: '', icon: '💵' },
-  { id: 'usdc-eth', name: 'USDC (Ethereum)', symbol: 'USDC', address: '', icon: '💵' },
-  { id: 'usdc-sol', name: 'USDC (Solana)', symbol: 'USDC', address: '', icon: '💵' },
-  { id: 'usdc-base', name: 'USDC (Base)', symbol: 'USDC', address: '', icon: '💵' },
-  { id: 'usdc-arb', name: 'USDC (Arbitrum)', symbol: 'USDC', address: '', icon: '💵' },
-  { id: 'dai', name: 'DAI (Ethereum)', symbol: 'DAI', address: '', icon: '◈' },
-  // Gaming & NFT
-  { id: 'imx', name: 'Immutable X', symbol: 'IMX', address: '', icon: '🎮' },
-  { id: 'gala', name: 'Gala', symbol: 'GALA', address: '', icon: '🎮' },
-  { id: 'axs', name: 'Axie Infinity', symbol: 'AXS', address: '', icon: '🎮' },
-  { id: 'sand', name: 'The Sandbox', symbol: 'SAND', address: '', icon: '🏜' },
-  { id: 'mana', name: 'Decentraland', symbol: 'MANA', address: '', icon: '🌐' },
-  { id: 'ron', name: 'Ronin', symbol: 'RON', address: '', icon: '⚔' },
-  // DeFi
-  { id: 'link', name: 'Chainlink', symbol: 'LINK', address: '', icon: '⬡' },
-  { id: 'uni', name: 'Uniswap', symbol: 'UNI', address: '', icon: '🦄' },
-  { id: 'aave', name: 'Aave', symbol: 'AAVE', address: '', icon: '👻' },
-  { id: 'mkr', name: 'Maker', symbol: 'MKR', address: '', icon: '🏛' },
-  { id: 'crv', name: 'Curve', symbol: 'CRV', address: '', icon: '〰' },
-  { id: 'ldo', name: 'Lido', symbol: 'LDO', address: '', icon: '🔷' },
-  { id: 'rpl', name: 'Rocket Pool', symbol: 'RPL', address: '', icon: '🚀' },
-  { id: 'cake', name: 'PancakeSwap', symbol: 'CAKE', address: '', icon: '🥞' },
-];
+type Severity = 'info' | 'warning' | 'critical';
+
+type SettingsState = {
+  // Docker / infra
+  dockerAutoStart: boolean;
+  skipDockerCheck: boolean;
+  dockerMaxRetries: number;
+  dockerRetryDelayMs: number;
+  // Nodes
+  nodeMaxConcurrent: number;
+  nodeAutoRestart: boolean;
+  nodeStartTimeoutMs: number;
+  // Alerts / health
+  alertCpuThreshold: number;
+  alertRamThreshold: number;
+  alertDiskThresholdGB: number;
+  healthcheckIntervalSeconds: number;
+  // API / sécurité
+  apiRateLimitEnabled: boolean;
+  apiAuthMode: 'none' | 'basic' | 'token';
+  apiToken: string;
+  apiBasicUser: string;
+  apiBasicPass: string;
+  allowedOrigins: string;
+  // Intégrations
+  discordWebhookUrl: string;
+  telegramBotToken: string;
+  telegramChatId: string;
+  alertMinSeverity: Severity;
+  // UX / logs
+  logLevel: 'debug' | 'info' | 'warn' | 'error';
+  logToFile: boolean;
+  logFilePath: string;
+  detailedLogNotifications: boolean;
+  uiLanguage: 'fr' | 'en';
+  uiTheme: 'light' | 'dark';
+};
+
+const SETTINGS_STORAGE_KEY = 'orchestratorSettings';
+
+const DEFAULT_SETTINGS: SettingsState = {
+  dockerAutoStart: true,
+  skipDockerCheck: false,
+  dockerMaxRetries: 30,
+  dockerRetryDelayMs: 4000,
+  nodeMaxConcurrent: 3,
+  nodeAutoRestart: true,
+  nodeStartTimeoutMs: 60000,
+  alertCpuThreshold: 85,
+  alertRamThreshold: 85,
+  alertDiskThresholdGB: 20,
+  healthcheckIntervalSeconds: 30,
+  apiRateLimitEnabled: true,
+  apiAuthMode: 'none',
+  apiToken: '',
+  apiBasicUser: '',
+  apiBasicPass: '',
+  allowedOrigins: 'http://localhost:5173,http://localhost:3000',
+  discordWebhookUrl: '',
+  telegramBotToken: '',
+  telegramChatId: '',
+  alertMinSeverity: 'warning',
+  logLevel: 'info',
+  logToFile: false,
+  logFilePath: './logs/app.log',
+  detailedLogNotifications: false,
+  uiLanguage: 'fr',
+  uiTheme: 'dark',
+};
+
+function getPreferredTheme(): 'light' | 'dark' {
+  try {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return prefersDark ? 'dark' : 'light';
+  } catch {
+    return 'dark';
+  }
+}
+
+function normalizeUiTheme(raw: unknown): 'light' | 'dark' {
+  if (raw === 'light' || raw === 'dark') return raw;
+  // Backward-compat: old settings may have stored "system".
+  if (raw === 'system') return getPreferredTheme();
+  return 'dark';
+}
 
 export default function SettingsPage() {
+  const { t, language, setLanguage } = useLanguage();
+  const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [systemHealth, setSystemHealth] = useState<{
     status: string;
     uptime: number;
     version: string;
   } | null>(null);
+  const [dockerStatus, setDockerStatus] = useState<{
+    available: boolean;
+    message: string;
+    mockEnabled: boolean;
+  } | null>(null);
   const [showDonation, setShowDonation] = useState(false);
-  const [selectedNetwork, setSelectedNetwork] = useState(DONATION_NETWORKS[0]);
+  const [selectedNetwork, setSelectedNetwork] = useState<DonationNetwork>(DONATION_NETWORKS[0]);
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
   const [searchNetwork, setSearchNetwork] = useState('');
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
+  const selectedDonation = selectedNetwork.addresses[selectedAddressIndex] ?? selectedNetwork.addresses[0];
+  const selectedDonationAddress = String(selectedDonation?.address ?? '');
+
   useEffect(() => {
+    // Charger les paramètres depuis le localStorage
+    try {
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const merged = { ...DEFAULT_SETTINGS, ...parsed };
+        merged.uiTheme = normalizeUiTheme((merged as any).uiTheme);
+        setSettings(merged);
+      }
+    } catch (err) {
+      console.warn('Impossible de charger les paramètres, utilisation des valeurs par défaut', err);
+      setSettings(DEFAULT_SETTINGS);
+    }
+
+    // Charger les paramètres côté backend (ceux qui ont un impact serveur)
+    (async () => {
+      try {
+        const backendSettings = await settingsApi.get();
+        setSettings((prev) => {
+          const merged = { ...prev, ...backendSettings } as any;
+          merged.uiTheme = normalizeUiTheme(merged.uiTheme);
+          return merged as SettingsState;
+        });
+      } catch (err) {
+        // Best-effort: settings backend peut être indisponible (ex: backend en démarrage)
+        console.debug('Settings backend non disponible, fallback localStorage', err);
+      }
+    })();
+
     const loadData = async () => {
       try {
         const health = await systemApi.health();
         setSystemHealth(health);
+
+        // Load Docker status
+        const response = await fetch('/api/system/status');
+        const data = await response.json();
+        if (data.success && data.data.docker) {
+          setDockerStatus({
+            available: data.data.docker.available,
+            message: data.data.docker.message,
+            mockEnabled: data.data.docker.mockEnabled,
+          });
+        }
       } catch (error) {
         console.error('Erreur chargement settings:', error);
         // Set default values if API fails
@@ -147,6 +178,107 @@ export default function SettingsPage() {
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    // Reset address selection when switching network
+    setSelectedAddressIndex(0);
+  }, [selectedNetwork.id]);
+
+  const applyTheme = (theme: 'light' | 'dark') => {
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+  };
+
+  // Persist settings locally
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    } catch (err) {
+      console.warn('Impossible de sauvegarder les paramètres', err);
+    }
+  }, [settings]);
+
+  // Apply theme instantly
+  useEffect(() => {
+    applyTheme(settings.uiTheme);
+  }, [settings.uiTheme]);
+
+  // Sync document + i18n language (must be done outside render)
+  useEffect(() => {
+    document.documentElement.lang = settings.uiLanguage;
+    if (settings.uiLanguage !== language) {
+      setLanguage(settings.uiLanguage);
+    }
+  }, [settings.uiLanguage, language, setLanguage]);
+
+  const updateSettings = (partial: Partial<SettingsState>) => {
+    // IMPORTANT: keep this function pure (no side-effects inside setState updater)
+    setSettingsError(null);
+    setSettings(prev => ({ ...prev, ...partial }));
+
+    // Persist server-impacting settings to backend (best-effort)
+    const serverKeys = new Set([
+      'dockerAutoStart',
+      'skipDockerCheck',
+      'dockerMaxRetries',
+      'dockerRetryDelayMs',
+      'nodeMaxConcurrent',
+      'nodeAutoRestart',
+      'nodeStartTimeoutMs',
+      'alertCpuThreshold',
+      'alertRamThreshold',
+      'alertDiskThresholdGB',
+      'healthcheckIntervalSeconds',
+      'apiRateLimitEnabled',
+      'apiAuthMode',
+      'apiToken',
+      'apiBasicUser',
+      'apiBasicPass',
+      'allowedOrigins',
+      'discordWebhookUrl',
+      'telegramBotToken',
+      'telegramChatId',
+      'alertMinSeverity',
+      'logLevel',
+      'logToFile',
+      'logFilePath',
+    ]);
+
+    const payload: Record<string, any> = {};
+    Object.entries(partial).forEach(([k, v]) => {
+      if (serverKeys.has(k) && typeof v !== 'undefined') {
+        payload[k] = v;
+      }
+    });
+
+    if (Object.keys(payload).length > 0) {
+      // Avoid bricking the backend: don't push auth mode changes without credentials.
+      const next = { ...settings, ...partial };
+
+      // If user is editing credentials while a mode is selected, ensure the backend also receives the mode.
+      if (next.apiAuthMode === 'token' && typeof payload.apiToken === 'string' && !payload.apiAuthMode) {
+        payload.apiAuthMode = 'token';
+      }
+      if (next.apiAuthMode === 'basic' && (typeof payload.apiBasicUser === 'string' || typeof payload.apiBasicPass === 'string') && !payload.apiAuthMode) {
+        payload.apiAuthMode = 'basic';
+      }
+
+      if (payload.apiAuthMode) {
+        if (next.apiAuthMode === 'token' && !String(next.apiToken || '').trim()) {
+          setSettingsError('Mode "token" sélectionné: veuillez définir un API token avant de l\'activer.');
+          return;
+        }
+        if (next.apiAuthMode === 'basic' && (!String(next.apiBasicUser || '').trim() || !String(next.apiBasicPass || '').trim())) {
+          setSettingsError('Mode "basic" sélectionné: veuillez définir username + password avant de l\'activer.');
+          return;
+        }
+      }
+
+      void settingsApi.update(payload).catch((err) => {
+        console.debug('Impossible de sauvegarder côté backend (continuation en local)', err);
+      });
+    }
+  };
 
   const formatUptime = (seconds: number): string => {
     const days = Math.floor(seconds / 86400);
@@ -170,12 +302,56 @@ export default function SettingsPage() {
          n.symbol.toLowerCase().includes(searchNetwork.toLowerCase())
   );
 
+  const renderToggle = (label: string, value: boolean, onChange: (v: boolean) => void, helper?: string) => (
+    <div className="flex items-start justify-between gap-4 bg-dark-900 rounded-lg p-4">
+      <div>
+        <p className="text-white font-medium">{label}</p>
+        {helper && <p className="text-sm text-dark-400 mt-1">{helper}</p>}
+      </div>
+      <button
+        onClick={() => onChange(!value)}
+        className={`w-14 h-8 rounded-full relative transition ${value ? 'bg-green-500' : 'bg-dark-600'}`}
+      >
+        <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white transition ${value ? 'translate-x-6' : ''}`} />
+      </button>
+    </div>
+  );
+
+  const renderInput = (label: string, value: string | number, onChange: (v: string) => void, helper?: string, type: string = 'text') => (
+    <div className="bg-dark-900 rounded-lg p-4 space-y-2">
+      <p className="text-white font-medium">{label}</p>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-white focus:border-primary-500 outline-none"
+      />
+      {helper && <p className="text-sm text-dark-400">{helper}</p>}
+    </div>
+  );
+
+  const renderSelect = <T extends string>(label: string, value: T, options: { value: T; label: string }[], onChange: (v: T) => void, helper?: string) => (
+    <div className="bg-dark-900 rounded-lg p-4 space-y-2">
+      <p className="text-white font-medium">{label}</p>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as T)}
+        className="w-full bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-white focus:border-primary-500 outline-none"
+      >
+        {options.map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      {helper && <p className="text-sm text-dark-400">{helper}</p>}
+    </div>
+  );
+
   return (
     <div className="space-y-8 max-w-4xl">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white">Paramètres</h1>
-        <p className="text-dark-400 mt-1">Configuration de l'orchestrateur</p>
+        <h1 className="text-3xl font-bold text-white">{t('settings.title')}</h1>
+        <p className="text-dark-400 mt-1">{t('settings.config')}</p>
       </div>
 
       {/* Free Software Banner */}
@@ -190,21 +366,20 @@ export default function SettingsPage() {
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-semibold text-green-400 mb-2">
-              🎉 100% Gratuit & Open Source
+              {t('settings.free')}
             </h2>
             <p className="text-dark-300 leading-relaxed">
-              <strong className="text-white">Node Orchestrator</strong> est entièrement gratuit, sans limites, 
-              sans version payante. Nous croyons en une blockchain accessible à tous.
+              <strong className="text-white">Node Orchestrator</strong> {t('settings.freeDesc')}
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">
-                ✓ Aucune limite de nodes
+                {t('settings.noLimit')}
               </span>
               <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">
-                ✓ 205 blockchains
+                {t('settings.blockchains')}
               </span>
               <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">
-                ✓ Open Source
+                {t('settings.openSource')}
               </span>
             </div>
           </div>
@@ -220,23 +395,23 @@ export default function SettingsPage() {
       >
         <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
           <ServerStackIcon className="w-6 h-6 text-primary-500" />
-          Statut Système
+          {t('settings.systemStatus')}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-dark-900 rounded-lg p-4">
-            <p className="text-sm text-dark-400 mb-1">Statut</p>
+            <p className="text-sm text-dark-400 mb-1">{t('settings.status')}</p>
             <div className="flex items-center gap-2">
               <div className={`w-3 h-3 rounded-full ${
                 systemHealth?.status === 'healthy' ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'
               }`} />
               <p className="text-white font-medium capitalize">
-                {systemHealth?.status === 'healthy' ? 'En ligne' : 'Démarrage...'}
+                {systemHealth?.status === 'healthy' ? t('settings.status.online') : t('settings.status.starting')}
               </p>
             </div>
           </div>
           <div className="bg-dark-900 rounded-lg p-4">
-            <p className="text-sm text-dark-400 mb-1">Uptime</p>
+            <p className="text-sm text-dark-400 mb-1">{t('settings.uptime')}</p>
             <p className="text-white font-medium">
               {systemHealth ? formatUptime(systemHealth.uptime) : '0m'}
             </p>
@@ -244,6 +419,123 @@ export default function SettingsPage() {
           <div className="bg-dark-900 rounded-lg p-4">
             <p className="text-sm text-dark-400 mb-1">Version</p>
             <p className="text-white font-medium">v{systemHealth?.version || '2.2.0'}</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Paramètres rapides (persistés localement) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="bg-dark-800 rounded-xl p-6 border border-dark-700 space-y-6"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-white">{t('settings.title')}</h2>
+          <p className="text-sm text-dark-400">{t('settings.defaultHelper')}</p>
+        </div>
+
+        {/* Docker / Infra */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-white">{t('settings.dockerInfra')}</h3>
+          <div className="grid md:grid-cols-2 gap-3">
+            {renderToggle(t('settings.autoStartDocker'), settings.dockerAutoStart, (v) => updateSettings({ dockerAutoStart: v }), t('settings.helper.autoStartDocker'))}
+            {renderToggle(t('settings.skipDocker'), settings.skipDockerCheck, (v) => updateSettings({ skipDockerCheck: v }), t('settings.helper.skipDocker'))}
+            {renderInput(t('settings.retries'), settings.dockerMaxRetries, (v) => updateSettings({ dockerMaxRetries: Number(v) || 0 }), t('settings.helper.retries'), 'number')}
+            {renderInput(t('settings.retryDelay'), settings.dockerRetryDelayMs, (v) => updateSettings({ dockerRetryDelayMs: Number(v) || 0 }), t('settings.helper.retryDelay'), 'number')}
+          </div>
+        </div>
+
+        {/* Nodes */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-white">{t('settings.nodes')}</h3>
+          <div className="grid md:grid-cols-2 gap-3">
+            {renderInput(t('settings.maxNodes'), settings.nodeMaxConcurrent, (v) => updateSettings({ nodeMaxConcurrent: Number(v) || 0 }), t('settings.helper.maxNodes'), 'number')}
+            {renderToggle(t('settings.autoRestart'), settings.nodeAutoRestart, (v) => updateSettings({ nodeAutoRestart: v }), t('settings.helper.autoRestart'))}
+            {renderInput(t('settings.startTimeout'), settings.nodeStartTimeoutMs, (v) => updateSettings({ nodeStartTimeoutMs: Number(v) || 0 }), t('settings.helper.startTimeout'), 'number')}
+          </div>
+        </div>
+
+        {/* Alertes / Health */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-white">{t('settings.alertsHealth')}</h3>
+          <div className="grid md:grid-cols-2 gap-3">
+            {renderInput(t('settings.cpuThreshold'), settings.alertCpuThreshold, (v) => updateSettings({ alertCpuThreshold: Number(v) || 0 }), undefined, 'number')}
+            {renderInput(t('settings.ramThreshold'), settings.alertRamThreshold, (v) => updateSettings({ alertRamThreshold: Number(v) || 0 }), undefined, 'number')}
+            {renderInput(t('settings.diskThreshold'), settings.alertDiskThresholdGB, (v) => updateSettings({ alertDiskThresholdGB: Number(v) || 0 }), t('settings.helper.diskThreshold'), 'number')}
+            {renderInput(t('settings.healthInterval'), settings.healthcheckIntervalSeconds, (v) => updateSettings({ healthcheckIntervalSeconds: Number(v) || 0 }), t('settings.helper.healthInterval'), 'number')}
+          </div>
+        </div>
+
+        {/* Sécurité / API */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-white">{t('settings.securityApi')}</h3>
+          {settingsError && (
+            <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-200 text-sm">
+              {settingsError}
+            </div>
+          )}
+          <div className="grid md:grid-cols-2 gap-3">
+            {renderToggle(t('settings.rateLimit'), settings.apiRateLimitEnabled, (v) => updateSettings({ apiRateLimitEnabled: v }), t('settings.helper.rateLimit'))}
+            {renderSelect(t('settings.authMode'), settings.apiAuthMode, [
+              { value: 'none', label: t('settings.none') },
+              { value: 'token', label: t('settings.token') },
+              { value: 'basic', label: t('settings.basic') },
+            ], (v) => updateSettings({ apiAuthMode: v as SettingsState['apiAuthMode'] }))}
+
+            {settings.apiAuthMode === 'token' && (
+              <>
+                {renderInput('API Token', settings.apiToken, (v) => updateSettings({ apiToken: v }), 'Env: API_TOKEN (stocké dans data/settings.json)', 'password')}
+              </>
+            )}
+
+            {settings.apiAuthMode === 'basic' && (
+              <>
+                {renderInput('API Basic Username', settings.apiBasicUser, (v) => updateSettings({ apiBasicUser: v }), 'Env: API_BASIC_USER')}
+                {renderInput('API Basic Password', settings.apiBasicPass, (v) => updateSettings({ apiBasicPass: v }), 'Env: API_BASIC_PASS', 'password')}
+              </>
+            )}
+
+            {renderInput(t('settings.allowedOrigins'), settings.allowedOrigins, (v) => updateSettings({ allowedOrigins: v }), t('settings.helper.allowedOrigins'))}
+          </div>
+        </div>
+
+        {/* Intégrations */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-white">{t('settings.integrations')}</h3>
+          <div className="grid md:grid-cols-2 gap-3">
+            {renderInput(t('settings.discord'), settings.discordWebhookUrl, (v) => updateSettings({ discordWebhookUrl: v }))}
+            {renderInput(t('settings.tgToken'), settings.telegramBotToken, (v) => updateSettings({ telegramBotToken: v }))}
+            {renderInput(t('settings.tgChat'), settings.telegramChatId, (v) => updateSettings({ telegramChatId: v }))}
+            {renderSelect<Severity>(t('settings.minAlert'), settings.alertMinSeverity, [
+              { value: 'info', label: t('settings.info') },
+              { value: 'warning', label: t('settings.warning') },
+              { value: 'critical', label: t('settings.critical') },
+            ], (v) => updateSettings({ alertMinSeverity: v }))}
+          </div>
+        </div>
+
+        {/* UX / Logs */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-white">{t('settings.uxLogs')}</h3>
+          <div className="grid md:grid-cols-2 gap-3">
+            {renderSelect<'debug' | 'info' | 'warn' | 'error'>(t('settings.logLevel'), settings.logLevel, [
+              { value: 'debug', label: t('settings.debug') },
+              { value: 'info', label: t('settings.infoLevel') },
+              { value: 'warn', label: t('settings.warn') },
+              { value: 'error', label: t('settings.error') },
+            ], (v) => updateSettings({ logLevel: v }))}
+            {renderToggle(t('settings.logToFile'), settings.logToFile, (v) => updateSettings({ logToFile: v }))}
+            {renderInput(t('settings.logPath'), settings.logFilePath, (v) => updateSettings({ logFilePath: v }))}
+            {renderToggle(t('settings.detailedLogNotifications'), settings.detailedLogNotifications, (v) => updateSettings({ detailedLogNotifications: v }), t('settings.helper.detailedLogNotifications'))}
+            {renderSelect<'fr' | 'en'>(t('settings.uiLang'), settings.uiLanguage, [
+              { value: 'fr', label: t('settings.french') },
+              { value: 'en', label: t('settings.english') },
+            ], (v) => updateSettings({ uiLanguage: v }))}
+            {renderSelect<'light' | 'dark'>(t('settings.theme'), settings.uiTheme, [
+              { value: 'light', label: t('settings.light') },
+              { value: 'dark', label: t('settings.dark') },
+            ], (v) => updateSettings({ uiTheme: v }))}
           </div>
         </div>
       </motion.div>
@@ -258,19 +550,18 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-white flex items-center gap-2">
             <HeartIcon className="w-6 h-6 text-pink-500" />
-            Soutenir le Projet
+            {t('settings.donation')}
           </h2>
           <button
             onClick={() => setShowDonation(!showDonation)}
             className="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-lg font-medium transition-colors"
           >
-            {showDonation ? 'Fermer' : '❤️ Faire un don'}
+            {showDonation ? t('settings.closeBtn') : t('settings.donateBtn')}
           </button>
         </div>
 
         <p className="text-dark-300 mb-4">
-          Ce logiciel est 100% gratuit. Si vous souhaitez soutenir son développement, 
-          vous pouvez faire un don sur l'un des {DONATION_NETWORKS.length}+ réseaux.
+          {t('settings.donationText', { count: DONATION_NETWORKS.length })}
         </p>
 
         {showDonation && (
@@ -281,7 +572,7 @@ export default function SettingsPage() {
           >
             <input
               type="text"
-              placeholder="Rechercher (Bitcoin, ETH, Solana...)"
+              placeholder={t('settings.searchNetwork')}
               value={searchNetwork}
               onChange={(e) => setSearchNetwork(e.target.value)}
               className="w-full bg-dark-900 text-white rounded-lg px-4 py-3 mb-4 border border-dark-600 focus:border-primary-500 focus:outline-none"
@@ -312,20 +603,41 @@ export default function SettingsPage() {
                   <p className="text-dark-400 text-sm">{selectedNetwork.symbol}</p>
                 </div>
               </div>
+
+              {selectedNetwork.addresses.length > 1 && (
+                <div className="mb-3">
+                  <select
+                    value={String(selectedAddressIndex)}
+                    onChange={(e) => setSelectedAddressIndex(Number(e.target.value) || 0)}
+                    className="w-full bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-white focus:border-primary-500 outline-none"
+                  >
+                    {selectedNetwork.addresses.map((a, idx) => (
+                      <option key={idx} value={String(idx)}>
+                        {a.label ? a.label : `Address ${idx + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedDonation?.derivationPath && (
+                    <p className="text-xs text-dark-400 mt-2 font-mono">
+                      {selectedDonation.derivationPath}
+                    </p>
+                  )}
+                </div>
+              )}
               
-              {selectedNetwork.address ? (
+              {selectedDonationAddress.trim() ? (
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    value={selectedNetwork.address}
+                    value={selectedDonationAddress}
                     readOnly
                     className="flex-1 bg-dark-800 text-white rounded-lg px-3 py-2 text-sm font-mono"
                   />
                   <button
-                    onClick={() => copyAddress(selectedNetwork.address)}
+                    onClick={() => copyAddress(selectedDonationAddress)}
                     className="p-2 bg-dark-700 hover:bg-dark-600 rounded-lg transition-colors"
                   >
-                    {copiedAddress === selectedNetwork.address ? (
+                    {copiedAddress === selectedDonationAddress ? (
                       <CheckIcon className="w-5 h-5 text-green-500" />
                     ) : (
                       <ClipboardDocumentIcon className="w-5 h-5 text-dark-400" />
@@ -334,7 +646,7 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <p className="text-dark-400 text-sm italic">
-                  Adresse non configurée - bientôt disponible.
+                  {t('settings.donationAddressMissing')}
                 </p>
               )}
             </div>
@@ -351,20 +663,38 @@ export default function SettingsPage() {
       >
         <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
           <CircleStackIcon className="w-6 h-6 text-primary-500" />
-          Configuration
+          {t('settings.configDocker')}
         </h2>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between bg-dark-900 rounded-lg p-4">
             <div>
-              <p className="text-white font-medium">Docker Socket</p>
-              <p className="text-sm text-dark-400">/var/run/docker.sock</p>
+              <p className="text-white font-medium">Docker Status</p>
+              <p className="text-sm text-dark-400">
+                {dockerStatus ? (
+                  <>
+                    {dockerStatus.available ? (
+                      <span className="text-green-400">{t('settings.dockerAvailable')}</span>
+                    ) : dockerStatus.mockEnabled ? (
+                      <span className="text-yellow-400">{t('settings.dockerDev')}</span>
+                    ) : (
+                      <span className="text-red-400">{t('settings.dockerUnavailable')}</span>
+                    )}
+                  </>
+                ) : (
+                  t('common.loading')
+                )}
+              </p>
             </div>
-            <div className="w-3 h-3 rounded-full bg-green-500" />
+            <div className={`w-3 h-3 rounded-full ${
+              dockerStatus?.available ? 'bg-green-500' : 
+              dockerStatus?.mockEnabled ? 'bg-yellow-500' :
+              'bg-red-500'
+            }`} />
           </div>
           <div className="flex items-center justify-between bg-dark-900 rounded-lg p-4">
             <div>
-              <p className="text-white font-medium">Dossier de données</p>
+              <p className="text-white font-medium">{t('settings.dataFolder')}</p>
               <p className="text-sm text-dark-400">./data/nodes</p>
             </div>
             <div className="w-3 h-3 rounded-full bg-green-500" />
@@ -379,18 +709,17 @@ export default function SettingsPage() {
         transition={{ delay: 0.4 }}
         className="bg-dark-800 rounded-xl p-6 border border-dark-700"
       >
-        <h2 className="text-xl font-semibold text-white mb-4">À propos</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">{t('settings.about')}</h2>
         
         <div className="prose prose-invert max-w-none text-dark-300">
           <p>
-            <strong className="text-white">Node Orchestrator</strong> - Orchestrateur de nodes multi-blockchains 
-            pour plus de 205 réseaux.
+            <strong className="text-white">Node Orchestrator</strong> - {t('settings.aboutSubtitle')}
           </p>
           <div className="bg-dark-900 rounded-lg p-4 mt-4">
             <p className="text-sm">
-              <span className="text-dark-400">Version:</span> <span className="text-white">2.2.0</span><br />
-              <span className="text-dark-400">Licence:</span> <span className="text-green-400">MIT (100% Gratuit)</span><br />
-              <span className="text-dark-400">GitHub:</span>{' '}
+              <span className="text-dark-400">{t('common.version')}:</span> <span className="text-white">v{systemHealth?.version || '2.2.0'}</span><br />
+              <span className="text-dark-400">{t('common.license')}:</span> <span className="text-green-400">{t('settings.licenseValue')}</span><br />
+              <span className="text-dark-400">{t('common.github')}:</span>{' '}
               <a 
                 href="https://github.com/greenbynox/universal-orchestrator-node" 
                 target="_blank" 
@@ -399,14 +728,14 @@ export default function SettingsPage() {
               >
                 github.com/greenbynox/universal-orchestrator-node
               </a><br />
-              <span className="text-dark-400">Discord:</span>{' '}
+              <span className="text-dark-400">{t('common.documentation')}:</span>{' '}
               <a 
-                href="https://discord.gg/AH93eHVQGU" 
+                href="https://greenbynox.github.io/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-indigo-400 hover:text-indigo-300"
+                className="text-primary-400 hover:text-primary-300"
               >
-                discord.gg/AH93eHVQGU
+                greenbynox.github.io
               </a>
             </p>
           </div>
@@ -421,22 +750,22 @@ export default function SettingsPage() {
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
               </svg>
-              GitHub
+              {t('common.github')}
             </a>
             <a
-              href="https://discord.gg/AH93eHVQGU"
+              href="https://greenbynox.github.io/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 rounded-lg text-white transition-colors"
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h11a3 3 0 0 0 3-3V7.828a2 2 0 0 0-.586-1.414l-2.828-2.828A2 2 0 0 0 15.172 3H6zm10 0.414L19.586 6H17a1 1 0 0 1-1-1V2.414zM7 9h10v2H7V9zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" />
               </svg>
-              Discord
+              {t('common.documentation')}
             </a>
           </div>
           <p className="text-sm mt-4 text-dark-400">
-            Made with ❤️ for the blockchain community.
+            {t('settings.madeWithLove')}
           </p>
         </div>
       </motion.div>

@@ -15,12 +15,78 @@ const AUTH_TAG_LENGTH = 16; // 128 bits
 const SALT_LENGTH = 16;
 const KEY_LENGTH = 32; // 256 bits
 
+export type ScryptParams = {
+  N: number;
+  r: number;
+  p: number;
+  dkLen?: number;
+  // Optional max memory for scrypt (bytes). If omitted, Node picks a default.
+  maxmem?: number;
+};
+
 /**
  * Dériver une clé de 32 bytes depuis la clé de configuration
  */
 function deriveKey(salt: Buffer): Buffer {
   const masterKey = config.security.encryptionKey;
   return crypto.scryptSync(masterKey, salt, KEY_LENGTH);
+}
+
+/**
+ * Derive a key from a user password using scrypt.
+ * Uses Node's built-in scrypt implementation.
+ */
+export function deriveKeyFromPassword(password: string, salt: Buffer, params: ScryptParams): Buffer {
+  const dkLen = params.dkLen ?? KEY_LENGTH;
+  return crypto.scryptSync(password, salt, dkLen, {
+    N: params.N,
+    r: params.r,
+    p: params.p,
+    maxmem: params.maxmem,
+  });
+}
+
+/**
+ * Encrypt a string with AES-256-GCM using a provided key.
+ * Output format: base64(iv | authTag | ciphertext)
+ */
+export function encryptWithKey(text: string, key: Buffer): string {
+  if (key.length !== KEY_LENGTH) {
+    throw new Error(`Invalid key length for ${ALGORITHM}: expected ${KEY_LENGTH}, got ${key.length}`);
+  }
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
+  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return Buffer.concat([iv, authTag, encrypted]).toString('base64');
+}
+
+/**
+ * Decrypt a string encrypted by encryptWithKey.
+ */
+export function decryptWithKey(encryptedText: string, key: Buffer): string {
+  if (key.length !== KEY_LENGTH) {
+    throw new Error(`Invalid key length for ${ALGORITHM}: expected ${KEY_LENGTH}, got ${key.length}`);
+  }
+  const data = Buffer.from(encryptedText, 'base64');
+  if (data.length < IV_LENGTH + AUTH_TAG_LENGTH + 1) {
+    throw new Error('Invalid ciphertext');
+  }
+  const iv = data.subarray(0, IV_LENGTH);
+  const authTag = data.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
+  const ciphertext = data.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
+  decipher.setAuthTag(authTag);
+  const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  return decrypted.toString('utf8');
+}
+
+/**
+ * Generate a verifier for a derived key.
+ * This allows password checks without attempting decryption.
+ */
+export function walletKeyVerifier(key: Buffer): Buffer {
+  return crypto.createHmac('sha256', key).update('wallet-verifier-v2').digest();
 }
 
 /**

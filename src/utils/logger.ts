@@ -96,19 +96,7 @@ export const logger = winston.createLogger({
   format: customFormat,
   defaultMeta: { service: 'node-orchestrator' },
   transports: [
-    // Fichier pour tous les logs
-    new winston.transports.File({
-      filename: path.join(config.paths.logs, 'combined.log'),
-      maxsize: 10 * 1024 * 1024, // 10MB
-      maxFiles: 5,
-    }),
-    // Fichier séparé pour les erreurs
-    new winston.transports.File({
-      filename: path.join(config.paths.logs, 'error.log'),
-      level: 'error',
-      maxsize: 10 * 1024 * 1024,
-      maxFiles: 5,
-    }),
+    // File transports are configured by applyLoggingFromEnv() below.
   ],
 });
 
@@ -118,6 +106,69 @@ if (config.isDev) {
     format: consoleFormat,
   }));
 }
+
+/**
+ * Apply logging config from environment variables.
+ * - LOG_LEVEL: debug|info|warn|error
+ * - LOG_TO_FILE: true|false (default true)
+ * - LOG_FILE_PATH: custom combined log path (optional)
+ */
+export function applyLoggingFromEnv(): void {
+  const level = (process.env.LOG_LEVEL || (config.isDev ? 'debug' : 'info')).toLowerCase();
+  if (['debug', 'info', 'warn', 'error'].includes(level)) {
+    logger.level = level;
+  }
+
+  const logToFile = process.env.LOG_TO_FILE ? process.env.LOG_TO_FILE === 'true' : true;
+
+  // Remove all existing file transports (best-effort)
+  for (const t of [...logger.transports]) {
+    // winston v3: File transport has a `filename` property
+    const anyT = t as any;
+    if (anyT?.filename && (t as any)?.constructor?.name === 'File') {
+      logger.remove(t);
+    }
+  }
+
+  if (!logToFile) {
+    return;
+  }
+
+  const configuredPath = process.env.LOG_FILE_PATH;
+  const combinedPath = (() => {
+    if (!configuredPath) return path.join(config.paths.logs, 'combined.log');
+    const resolved = path.resolve(configuredPath);
+    return resolved.toLowerCase().endsWith('.log') ? resolved : `${resolved}.log`;
+  })();
+
+  const errorPath = (() => {
+    if (!configuredPath) return path.join(config.paths.logs, 'error.log');
+    const base = combinedPath.toLowerCase().endsWith('.log') ? combinedPath.slice(0, -4) : combinedPath;
+    return `${base}.error.log`;
+  })();
+
+  try {
+    fs.mkdirSync(path.dirname(combinedPath), { recursive: true });
+  } catch {
+    // ignore
+  }
+
+  logger.add(new winston.transports.File({
+    filename: combinedPath,
+    maxsize: 10 * 1024 * 1024,
+    maxFiles: 5,
+  }));
+
+  logger.add(new winston.transports.File({
+    filename: errorPath,
+    level: 'error',
+    maxsize: 10 * 1024 * 1024,
+    maxFiles: 5,
+  }));
+}
+
+// Apply env config on startup
+applyLoggingFromEnv();
 
 // ============================================================
 // LOGGER SPÉCIFIQUE PAR NODE

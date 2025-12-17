@@ -9,7 +9,8 @@ docker:
     rpc: 8332
     p2p: 8333
   volumes:
-    - "/data:/root/.bitcoin"
+    # "/data" is treated as a placeholder and will be replaced by this node's host data directory.
+    - "/data:/data"
 resources:
   ram: "4GB"
   cpu: "1"

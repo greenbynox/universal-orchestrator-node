@@ -13,7 +13,7 @@ L'installer NSIS a été amélioré pour :
 ### 🎯 Étapes d'installation
 
 1. **Télécharger l'installer**
-   - Téléchargez `Node-Orchestrator-2.2.0-Setup.exe` depuis la page de release
+   - Téléchargez `Node-Orchestrator-2.3.0-Setup.exe` depuis la page de release
 
 2. **Lancer l'installation**
    - Double-cliquez sur le fichier .exe
@@ -89,5 +89,5 @@ Si vous n'aviez pas coché la checkbox lors de l'installation, vous pouvez l'ins
 
 ---
 
-**Version**: 2.2.0  
-**Dernière mise à jour**: Décembre 2024
+**Version**: 2.3.0  
+**Dernière mise à jour**: Décembre 2025

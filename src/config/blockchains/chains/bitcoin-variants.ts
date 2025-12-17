@@ -970,9 +970,11 @@ export const BITCOIN_VARIANTS: BlockchainDefinition[] = [
     docker: {
       images: {
         full: 'monacoin/monacoind:latest',
+        pruned: 'monacoin/monacoind:latest',
       },
       requirements: {
         full: { diskGB: 5, memoryGB: 1, syncDays: 0.5 },
+        pruned: { diskGB: 2, memoryGB: 1, syncDays: 0.2 },
       },
     },
     wallet: {

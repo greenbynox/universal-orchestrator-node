@@ -6,6 +6,10 @@ frontend/node_modules/
 dist/
 frontend/dist/
 
+# Vendored Docker Desktop binaries (local/dev/installer payload) — do not commit to git.
+# You can still ship them via your installer/release pipeline if you choose.
+Docker/
+
 # Environment files (contain secrets)
 .env
 .env.local
@@ -13,6 +17,16 @@ frontend/dist/
 
 # Data (user data)
 data/
+
+# Prisma / SQLite local dev artifacts
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
+prisma/*.sqlite
+prisma/*.sqlite-journal
+prisma/*.sqlite-wal
+prisma/*.sqlite-shm
 
 # System files
 .DS_Store

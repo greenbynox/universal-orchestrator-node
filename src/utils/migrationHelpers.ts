@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 
 const prisma = new PrismaClient();
 
@@ -22,11 +23,27 @@ interface LegacyNode {
  * Migre les nodes du fichier JSON historique vers SQLite via Prisma
  */
 export async function migrateNodesJsonToPrisma(): Promise<void> {
-  const nodesFile = path.join(process.cwd(), 'data', 'nodes.json');
-  if (!fs.existsSync(nodesFile)) {
-    logger.info('Aucun nodes.json à migrer');
+  // Try multiple locations
+  const possiblePaths = [
+    path.join(config.paths.data, 'nodes.json'),
+    path.join(process.cwd(), 'data', 'nodes.json'),
+    path.join(process.cwd(), 'data', 'nodes', 'nodes.json')
+  ];
+
+  let nodesFile = '';
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      nodesFile = p;
+      break;
+    }
+  }
+
+  if (!nodesFile) {
+    logger.info('Aucun nodes.json à migrer (checked multiple locations)');
     return;
   }
+  
+  logger.info(`Migrating nodes from ${nodesFile}`);
 
   const backupFile = path.join(process.cwd(), 'data', `nodes.json.backup`);
   const raw = fs.readFileSync(nodesFile, 'utf-8');
