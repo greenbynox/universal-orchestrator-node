@@ -7,7 +7,9 @@
 !include "x64.nsh"
 
 ; Paths (compile-time)
-!define PROJECT_DIR "${__FILEDIR__}\\.."
+!ifndef PROJECT_DIR
+  !define PROJECT_DIR "${__FILEDIR__}\\.."
+!endif
 !define DOCKER_WSL_INSTALL_PS1 "${PROJECT_DIR}\\scripts\\install-docker-engine-wsl.ps1"
 
 ; ============================================================
@@ -26,7 +28,7 @@ Var dockerCheckbox
 Var installDocker
 
 !macro customHeader
-  !system "echo 'Building Node Orchestrator v2.2.0 Installer...'"
+  !system "echo 'Building Node Orchestrator Installer...'"
 !macroend
 
 !macro preInit

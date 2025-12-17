@@ -31,3 +31,8 @@ This project follows semantic-ish versioning (`vMAJOR.MINOR.PATCH`).
 
 ### Notes
 - To build release artifacts for Windows/Linux/macOS, tag the repo with `v2.3.0` (or later) — see `docs/RELEASE.md`.
+
+## [2.3.1] - 2025-12-17
+
+### Fixed
+- Windows release build: NSIS installer no longer fails with `!define: "PROJECT_DIR" already defined` (guarded definition in `electron/installer.nsh`).

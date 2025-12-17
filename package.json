@@ -1,6 +1,6 @@
 {
   "name": "node-orchestrator",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Orchestrateur de Nodes Multi-Blockchains – Refonte Architecturale Data-Driven (205+ blockchains)",
   "main": "electron/main.js",
   "scripts": {
