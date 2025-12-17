@@ -1,4 +1,4 @@
-# 🚀 Node Orchestrator v2.2.0
+# 🚀 Node Orchestrator v2.3.0
 
 <div align="center">
 
@@ -8,7 +8,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://reactjs.org/)
 [![Electron](https://img.shields.io/badge/Electron-39-47848F.svg)](https://www.electronjs.org/)
-[![Tests](https://img.shields.io/badge/Tests-83/83%20Passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](tests/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Free](https://img.shields.io/badge/Price-100%25%20FREE-brightgreen.svg)]()
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA.svg)](https://discord.gg/AH93eHVQGU)
@@ -23,7 +23,14 @@
 
 ---
 
-## ✨ Version 2.2.0 – AI-Ops, Sécurité & Observabilité
+## ✨ Version 2.3.0 – Stabilité (WSL2/Docker), Sécurité & Expérience Dev
+
+### 🔧 Quoi de Neuf en v2.3.0
+
+- **WSL2 / Docker TCP** : durcissement de la détection d'hôte, gestion des ports et stratégie de retry pour éviter les `ECONNREFUSED` côté RPC.
+- **Modes supportés “vraiment”** : la matrice `full/pruned/light` est maintenant une source de vérité côté backend (ex: **Ethereum ne propose plus `light`**).
+- **Dev workflow** : réduction du bruit Socket.IO/Vite (connexion WS directe au backend en dev) + scripts PowerShell dédiés (`scripts/dev.ps1`, `scripts/start-docker.ps1`).
+- **Sécurité** : middleware d'auth API fail-closed en prod (configuration invalide = refus), CORS WS aligné sur HTTP, redaction de configs sensibles dans les events.
 
 ### 🎯 Trois Piliers Fondamentaux
 
@@ -65,7 +72,7 @@
 
 ---
 
-## ✨ Fonctionnalités v2.2.0
+## ✨ Fonctionnalités v2.3.0
 
 ### 🔗 205+ Blockchains Supportées
 
@@ -115,10 +122,10 @@
 
 ### Windows (Recommandé)
 
-> **[📥 Télécharger Node Orchestrator v2.2.0 (Windows)](https://github.com/greenbynox/universal-orchestrator-node/releases)**
+> **[📥 Télécharger Node Orchestrator v2.3.0 (Windows)](https://github.com/greenbynox/universal-orchestrator-node/releases)**
 
 - `Node Orchestrator-2.0.0-Setup.exe` - Installateur Windows
-- `Node Orchestrator-2.2.0-Portable.exe` - Version portable (aucune installation)
+- `Node Orchestrator-2.3.0-Portable.exe` - Version portable (aucune installation, **Docker Desktop doit déjà être installé**)
 
 ### Depuis les sources
 
@@ -133,6 +140,15 @@ cd frontend && npm install && cd ..
 
 # Lancer en mode développement
 npm run dev
+
+# (Windows) Si Docker Desktop est embarqué dans le repo mais pas installé/réparé,
+# vous pouvez activer l'auto-install/repair (UAC requis) :
+#   - DOCKER_DESKTOP_AUTO_INSTALL=true
+#   - DOCKER_DESKTOP_ACCEPT_LICENSE=true
+# Exemple (PowerShell):
+#   $env:DOCKER_DESKTOP_AUTO_INSTALL='true'
+#   $env:DOCKER_DESKTOP_ACCEPT_LICENSE='true'
+#   npm run dev
 
 # Ou démarrer l'application Electron complète
 npm run start:dev
@@ -153,9 +169,13 @@ npm run start:dev
 | **Node.js** | 18+ | 20+ (pour dev) |
 | **Docker** | ✅ Requis | Desktop Edition |
 
+> Note: sur Windows, le **Setup** peut installer Docker Desktop automatiquement. La version **Portable** et l'exécution **depuis les sources** nécessitent que Docker Desktop soit déjà installé et lancé.
+
 ### Installation & Démarrage
 
-1. **Installer Docker** : [Docker Desktop](https://docs.docker.com/get-docker/)
+1. **Docker** :
+   - Via le **Setup Windows**: Docker Desktop peut être installé automatiquement.
+   - Depuis les **sources** / en **Portable**: installez Docker Desktop : [Docker Desktop](https://docs.docker.com/get-docker/)
 2. **Installer les dépendances** :
    ```bash
    npm install
@@ -170,8 +190,8 @@ npm run start:dev
 
 | Blockchain | Full Node | Pruned | Light |
 |------------|-----------|--------|-------|
-| Bitcoin | 500 GB+ | 10-50 GB | < 1 GB |
-| Ethereum | 1 TB+ | 200-500 GB | < 1 GB |
+| Bitcoin | 500 GB+ | 10-50 GB | N/A (non supporté par l'orchestrateur) |
+| Ethereum | 1 TB+ | 200-500 GB | N/A (geth ne supporte plus le mode light) |
 | Solana | 500 GB+ | - | - |
 | Monero | 150 GB+ | 30 GB | - |
 
@@ -210,7 +230,7 @@ npm run start:dev
 
 ---
 
-## 🏗️ Architecture v2.2.0
+## 🏗️ Architecture v2.3.0
 
 ```
 universal-orchestrator-node/
@@ -257,7 +277,7 @@ universal-orchestrator-node/
 
 ---
 
-## 🔐 Sécurité v2.2.0
+## 🔐 Sécurité v2.3.0
 
 ### ✅ Garantie 100% Gratuit & Audité
 
@@ -340,13 +360,13 @@ npm run typecheck
 npm run lint
 ```
 
-**Status v2.2.0** : ✅ All tests passing | ✅ 0 type errors | ✅ Prisma migrated
+**Status v2.3.0** : ✅ All tests passing | ✅ 0 type errors | ✅ Prisma migrated
 
 ---
 
-## 📝 Roadmap v2.2.0
+## 📝 Roadmap
 
-Voir [ROADMAP_v2.2.0.md](ROADMAP_v2.2.0.md) pour le plan détaillé.
+Voir [ROADMAP_v2.0.md](ROADMAP_v2.0.md) pour le plan détaillé.
 
 ### Prochaines fonctionnalités :
 - 🤖 Assistant IA intégré (détection anomalies, maintenance prédictive)
@@ -417,7 +437,7 @@ Ce projet est sous licence **MIT** - voir le fichier [LICENSE](LICENSE) pour plu
 
 🌐 Décentralisation pour tous 🌐
 
-<sub>v2.2.0 - AI-Ops, Hardware Wallets & Dashboard Cockpit</sub>
+<sub>v2.3.0 - Stabilité WSL2/Docker, Sécurité & Dev UX</sub>
 <sub>Décembre 2025</sub>
 
 </div>

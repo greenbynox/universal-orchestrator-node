@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { BlockchainType, NodeMode, BLOCKCHAIN_COLORS, BLOCKCHAIN_ICONS, BLOCKCHAIN_NAMES } from '../types';
-import { nodesApi, systemApi } from '../services/api';
+import { nodesApi } from '../services/api';
 import { useStore } from '../store';
 import toast from 'react-hot-toast';
 
@@ -26,20 +26,19 @@ export default function CreateNodeModal({ isOpen, onClose, defaultBlockchain = '
   const [blockchain, setBlockchain] = useState<BlockchainType>(defaultBlockchain);
   const [mode, setMode] = useState<NodeMode>(defaultMode);
   const [isLoading, setIsLoading] = useState(false);
-  const [blockchains, setBlockchains] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const { addNode } = useStore();
+  // Use blockchains from store (already loaded by App.tsx)
+  const { addNode, blockchains: storeBlockchains } = useStore();
+  const blockchains = storeBlockchains;
 
-  // Load blockchains from API
-  useEffect(() => {
-    if (isOpen) {
-      systemApi.getBlockchains().then((chains) => {
-        if (chains && chains.length > 0) {
-          setBlockchains(chains);
-        }
-      }).catch(console.error);
-    }
-  }, [isOpen]);
+  const isStoreLoaded = blockchains.length > 0;
+  const supportedCount = isStoreLoaded ? blockchains.filter((bc: any) => bc?.nodeSupported === true).length : 0;
+
+  const selectedChain = blockchains.find((bc: any) => bc?.id === blockchain);
+  const supportedModes: NodeMode[] = useMemo(
+    () => (selectedChain?.nodeSupportedModes as NodeMode[]) || ['full', 'pruned', 'light'],
+    [selectedChain]
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -48,14 +47,29 @@ export default function CreateNodeModal({ isOpen, onClose, defaultBlockchain = '
     }
   }, [defaultBlockchain, defaultMode, isOpen]);
 
-  // Filter blockchains by search
-  const filteredBlockchains = blockchains.length > 0 
-    ? blockchains.filter(bc => 
-        bc.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        bc.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        bc.id?.toLowerCase().includes(searchTerm.toLowerCase())
-      ).slice(0, 20) // Show max 20 at a time
-    : defaultBlockchains.map(id => ({ id, name: BLOCKCHAIN_NAMES[id], symbol: id.toUpperCase() }));
+  useEffect(() => {
+    // If selected blockchain doesn't support the currently selected mode, pick a supported one.
+    if (supportedModes.length > 0 && !supportedModes.includes(mode)) {
+      setMode(supportedModes[0]);
+    }
+  }, [blockchain, mode, supportedModes]);
+
+  // Filter blockchains by search (catalog) - show unsupported as disabled.
+  const filteredBlockchains = isStoreLoaded
+    ? blockchains
+        .filter((bc: any) => {
+          const q = searchTerm.trim().toLowerCase();
+          if (!q) return true;
+          return (
+            bc.name?.toLowerCase().includes(q) ||
+            bc.symbol?.toLowerCase().includes(q) ||
+            bc.id?.toLowerCase().includes(q)
+          );
+        })
+        .slice(0, 30) // Show max 30 at a time
+    : defaultBlockchains.map(id => ({ id, name: BLOCKCHAIN_NAMES[id], symbol: id.toUpperCase(), nodeSupported: true }));
+
+  const hasNoMatches = isStoreLoaded && filteredBlockchains.length === 0 && searchTerm.trim().length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,7 +145,7 @@ export default function CreateNodeModal({ isOpen, onClose, defaultBlockchain = '
                 {/* Blockchain */}
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-2">
-                    Blockchain {blockchains.length > 0 && `(${blockchains.length} disponibles)`}
+                    Blockchain {isStoreLoaded && `(${supportedCount} supportées sur ${blockchains.length})`}
                   </label>
                   {blockchains.length > 5 && (
                     <input
@@ -142,36 +156,58 @@ export default function CreateNodeModal({ isOpen, onClose, defaultBlockchain = '
                       className="input-base mb-3"
                     />
                   )}
-                  <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto">
-                    {filteredBlockchains.map((bc) => {
-                      const bcId = bc.id || bc;
-                      const bcName = bc.name || BLOCKCHAIN_NAMES[bcId] || bcId;
-                      const bcColor = bc.color || BLOCKCHAIN_COLORS[bcId] || '#888';
-                      const bcIcon = bc.icon || BLOCKCHAIN_ICONS[bcId] || '🔗';
-                      return (
-                        <button
-                          key={bcId}
-                          type="button"
-                          onClick={() => setBlockchain(bcId as BlockchainType)}
-                          className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
-                            blockchain === bcId
-                              ? 'border-primary-500 bg-primary-500/10'
-                              : 'border-dark-600 hover:border-dark-500'
-                          }`}
-                        >
-                          <span 
-                            className="text-2xl"
-                            style={{ color: bcColor }}
+                  {hasNoMatches ? (
+                    <div className="bg-dark-900 border border-dark-700 rounded-xl p-4 text-center">
+                      <div className="text-dark-300 text-sm">Aucun résultat pour “{searchTerm.trim()}”.</div>
+                      <button
+                        type="button"
+                        onClick={() => setSearchTerm('')}
+                        className="mt-3 text-sm text-primary-400 hover:text-primary-300"
+                      >
+                        Effacer la recherche
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto">
+                      {filteredBlockchains.map((bc: any) => {
+                        const bcId = bc.id || bc;
+                        const bcName = bc.name || BLOCKCHAIN_NAMES[bcId] || bcId;
+                        const bcColor = bc.color || BLOCKCHAIN_COLORS[bcId] || '#888';
+                        const bcIcon = bc.icon || BLOCKCHAIN_ICONS[bcId] || '🔗';
+                        const isSupported = bc?.nodeSupported === true;
+                        return (
+                          <button
+                            key={bcId}
+                            type="button"
+                            onClick={() => {
+                              if (!isSupported) {
+                                toast.error('Blockchain pas encore supportée pour la création de node');
+                                return;
+                              }
+                              setBlockchain(bcId as BlockchainType);
+                            }}
+                            className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                              !isSupported
+                                ? 'opacity-40 cursor-not-allowed border-dark-700'
+                                : (blockchain === bcId
+                                  ? 'border-primary-500 bg-primary-500/10'
+                                  : 'border-dark-600 hover:border-dark-500')
+                            }`}
                           >
-                            {bcIcon}
-                          </span>
-                          <span className="text-xs text-dark-300 truncate w-full text-center">
-                            {bcName.slice(0, 8)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                            <span 
+                              className="text-2xl"
+                              style={{ color: bcColor }}
+                            >
+                              {bcIcon}
+                            </span>
+                            <span className="text-xs text-dark-300 truncate w-full text-center">
+                              {bcName.slice(0, 8)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Mode */}
@@ -184,11 +220,14 @@ export default function CreateNodeModal({ isOpen, onClose, defaultBlockchain = '
                       <button
                         key={m.value}
                         type="button"
-                        onClick={() => setMode(m.value)}
+                        onClick={() => supportedModes.includes(m.value) && setMode(m.value)}
+                        disabled={!supportedModes.includes(m.value)}
                         className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                          mode === m.value
-                            ? 'border-primary-500 bg-primary-500/10'
-                            : 'border-dark-600 hover:border-dark-500'
+                          !supportedModes.includes(m.value)
+                            ? 'opacity-50 cursor-not-allowed border-dark-700'
+                            : mode === m.value
+                              ? 'border-primary-500 bg-primary-500/10'
+                              : 'border-dark-600 hover:border-dark-500'
                         }`}
                       >
                         <div className="flex items-center justify-between">

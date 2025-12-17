@@ -8,6 +8,7 @@ import { Router, Request, Response } from 'express';
 import { blockchainRegistry } from '../config/blockchains';
 import { BlockchainCategory } from '../config/blockchains/types';
 import { logger } from '../utils/logger';
+import { getNodeSupportedModes } from '../core/nodeSupport';
 
 const router: Router = Router();
 
@@ -82,6 +83,8 @@ router.get('/', (req: Request, res: Response) => {
       features: c.features,
       website: c.website,
       coingeckoId: c.coingeckoId,
+      nodeSupported: getNodeSupportedModes(c.id).length > 0,
+      nodeSupportedModes: getNodeSupportedModes(c.id),
     }));
 
     res.json({
@@ -185,8 +188,8 @@ router.get('/:id/modes', (req: Request, res: Response) => {
       });
     }
 
-    // Get supported modes from docker config
-    const supportedModes = chain.docker?.images ? Object.keys(chain.docker.images) : ['full', 'pruned', 'light'];
+    // Only return modes that are truly supported by the orchestrator.
+    const supportedModes = getNodeSupportedModes(chain.id);
     
     // Map to include requirements for each mode
     const modes = supportedModes.map((mode: any) => {
@@ -218,6 +221,7 @@ router.get('/:id/modes', (req: Request, res: Response) => {
       data: {
         chainId: chain.id,
         chainName: chain.name,
+        nodeSupported: supportedModes.length > 0,
         modes: modes,
       },
     });

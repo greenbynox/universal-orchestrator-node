@@ -11,6 +11,7 @@ interface HealthCheckOptions {
   cpuThreshold?: number;
   memThresholdPercent?: number;
   diskThresholdPercent?: number;
+  diskFreeThresholdGB?: number;
 }
 
 export class HealthCheckService {
@@ -50,10 +51,12 @@ export class HealthCheckService {
     const totalDisk = disks.reduce((acc, d) => acc + d.size, 0);
     const usedDisk = disks.reduce((acc, d) => acc + d.used, 0);
     const diskUsagePercent = totalDisk === 0 ? 0 : Math.round((usedDisk / totalDisk) * 100);
+    const availableDiskGB = Math.round(((totalDisk - usedDisk) / (1024 * 1024 * 1024)) * 100) / 100;
 
     const cpuThreshold = this.options.cpuThreshold ?? 80;
     const memThreshold = this.options.memThresholdPercent ?? 95;
     const diskThreshold = this.options.diskThresholdPercent ?? 90;
+    const diskFreeThresholdGB = this.options.diskFreeThresholdGB;
 
     if (cpuUsage > cpuThreshold) {
       await alertManager.trigger({
@@ -77,16 +80,30 @@ export class HealthCheckService {
       await alertManager.resolveByType('MEMORY_CRITICAL');
     }
 
-    if (diskUsagePercent > diskThreshold) {
-      await alertManager.trigger({
-        type: 'DISK_FULL',
-        severity: 'CRITICAL',
-        message: `Disk usage high: ${diskUsagePercent}%`,
-        timestamp: new Date(),
-        metadata: { diskUsagePercent },
-      });
+    if (typeof diskFreeThresholdGB === 'number') {
+      if (availableDiskGB < diskFreeThresholdGB) {
+        await alertManager.trigger({
+          type: 'DISK_FULL',
+          severity: 'CRITICAL',
+          message: `Disk free space low: ${availableDiskGB}GB (< ${diskFreeThresholdGB}GB)`,
+          timestamp: new Date(),
+          metadata: { availableDiskGB, thresholdGB: diskFreeThresholdGB },
+        });
+      } else {
+        await alertManager.resolveByType('DISK_FULL');
+      }
     } else {
-      await alertManager.resolveByType('DISK_FULL');
+      if (diskUsagePercent > diskThreshold) {
+        await alertManager.trigger({
+          type: 'DISK_FULL',
+          severity: 'CRITICAL',
+          message: `Disk usage high: ${diskUsagePercent}%`,
+          timestamp: new Date(),
+          metadata: { diskUsagePercent },
+        });
+      } else {
+        await alertManager.resolveByType('DISK_FULL');
+      }
     }
   }
 
@@ -100,7 +117,8 @@ export class HealthCheckService {
       try {
         const state = node.state;
 
-        if (state.status === 'error' || state.status === 'stopped') {
+        // Ne relance pas automatiquement les nodes volontairement arrêtés
+        if (state.status === 'error') {
           const lastSeen = this.lastSyncMap.get(node.config.id);
           if (!lastSeen || now - lastSeen.timestamp > downThreshold) {
             await alertManager.trigger({
@@ -110,6 +128,7 @@ export class HealthCheckService {
               message: `${node.config.name} (${node.config.blockchain}) indisponible`,
               timestamp: new Date(),
             });
+            this.nodeManager.scheduleAutoRestart(node.config.id, 'HealthCheck: node down');
           }
         } else {
           await alertManager.resolveByType('NODE_DOWN', node.config.id);

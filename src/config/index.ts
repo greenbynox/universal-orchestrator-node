@@ -8,10 +8,106 @@
 
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { BlockchainType, NodeMode } from '../types';
 
 // Charger les variables d'environnement
 dotenv.config();
+
+// ============================================================
+// RUNTIME SETTINGS (persisted JSON) -> process.env overrides
+// ============================================================
+// NOTE: this runs BEFORE building the exported `config` object so that
+// all downstream modules (including NodeManager) see the effective values.
+
+const computeDataPath = (): string => {
+  const explicit = process.env.DATA_PATH;
+  if (explicit) return path.resolve(explicit);
+  const nodesPath = process.env.NODES_DATA_PATH ? path.resolve(process.env.NODES_DATA_PATH) : '';
+  if (nodesPath && path.basename(nodesPath).toLowerCase() === 'nodes') {
+    return path.dirname(nodesPath);
+  }
+  if (nodesPath) return nodesPath;
+  return path.resolve('./data');
+};
+
+const runtimeSettingsFile = path.join(computeDataPath(), 'settings.json');
+
+const setEnvBool = (key: string, value: unknown) => {
+  if (typeof value === 'boolean') process.env[key] = value ? 'true' : 'false';
+  if (typeof value === 'string') {
+    const s = value.trim().toLowerCase();
+    if (s === 'true' || s === 'false') process.env[key] = s;
+  }
+};
+
+const setEnvNum = (key: string, value: unknown) => {
+  const n = typeof value === 'number' ? value : (typeof value === 'string' ? Number(value) : NaN);
+  if (Number.isFinite(n)) process.env[key] = String(n);
+};
+
+const setEnvStr = (key: string, value: unknown) => {
+  if (typeof value === 'string') process.env[key] = value;
+};
+
+try {
+  if (fs.existsSync(runtimeSettingsFile)) {
+    const raw = fs.readFileSync(runtimeSettingsFile, 'utf8');
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+    // Docker / infra
+    setEnvBool('DOCKER_AUTO_START', parsed.dockerAutoStart);
+    setEnvBool('SKIP_DOCKER_CHECK', parsed.skipDockerCheck);
+    setEnvNum('DOCKER_MAX_RETRIES', parsed.dockerMaxRetries);
+    setEnvNum('DOCKER_RETRY_DELAY_MS', parsed.dockerRetryDelayMs);
+
+    // Nodes
+    setEnvNum('NODE_MAX_CONCURRENT', parsed.nodeMaxConcurrent);
+    setEnvBool('NODE_AUTO_RESTART', parsed.nodeAutoRestart);
+    setEnvNum('NODE_START_TIMEOUT_MS', parsed.nodeStartTimeoutMs);
+
+    // Alerts / health
+    setEnvNum('ALERT_CPU_THRESHOLD', parsed.alertCpuThreshold);
+    setEnvNum('ALERT_RAM_THRESHOLD', parsed.alertRamThreshold);
+    setEnvNum('ALERT_DISK_THRESHOLD_GB', parsed.alertDiskThresholdGB);
+    setEnvNum('HEALTHCHECK_INTERVAL_SECONDS', parsed.healthcheckIntervalSeconds);
+    setEnvStr('ALERT_MIN_SEVERITY', parsed.alertMinSeverity);
+
+    // API
+    setEnvBool('API_RATE_LIMIT_ENABLED', parsed.apiRateLimitEnabled);
+    setEnvStr('API_TOKEN', parsed.apiToken);
+    setEnvStr('API_BASIC_USER', parsed.apiBasicUser);
+    setEnvStr('API_BASIC_PASS', parsed.apiBasicPass);
+    setEnvStr('ALLOWED_ORIGINS', parsed.allowedOrigins);
+
+    // Apply auth mode last, and guard against invalid combinations in dev.
+    const isDev = process.env.NODE_ENV !== 'production';
+    const mode = typeof parsed.apiAuthMode === 'string' ? parsed.apiAuthMode.trim().toLowerCase() : '';
+    const token = typeof parsed.apiToken === 'string' ? parsed.apiToken.trim() : (process.env.API_TOKEN || '').trim();
+    const user = typeof parsed.apiBasicUser === 'string' ? parsed.apiBasicUser.trim() : (process.env.API_BASIC_USER || '').trim();
+    const pass = typeof parsed.apiBasicPass === 'string' ? parsed.apiBasicPass.trim() : (process.env.API_BASIC_PASS || '').trim();
+
+    if (mode === 'token' && !token && isDev) {
+      setEnvStr('API_AUTH_MODE', 'none');
+    } else if (mode === 'basic' && (!user || !pass) && isDev) {
+      setEnvStr('API_AUTH_MODE', 'none');
+    } else {
+      setEnvStr('API_AUTH_MODE', parsed.apiAuthMode);
+    }
+
+    // Integrations
+    setEnvStr('DISCORD_WEBHOOK_URL', parsed.discordWebhookUrl);
+    setEnvStr('TELEGRAM_BOT_TOKEN', parsed.telegramBotToken);
+    setEnvStr('TELEGRAM_CHAT_ID', parsed.telegramChatId);
+
+    // Logs
+    setEnvStr('LOG_LEVEL', parsed.logLevel);
+    setEnvBool('LOG_TO_FILE', parsed.logToFile);
+    setEnvStr('LOG_FILE_PATH', parsed.logFilePath);
+  }
+} catch {
+  // ignore invalid settings.json (falls back to .env/defaults)
+}
 
 // ============================================================
 // CONFIGURATION GÉNÉRALE (100% GRATUIT - AUCUNE LIMITE)
@@ -25,7 +121,19 @@ export const config = {
   // Serveur
   server: {
     port: parseInt(process.env.PORT || '3001'),
-    host: process.env.HOST || '127.0.0.1',
+    host: (() => {
+      const raw = (process.env.HOST || '127.0.0.1').trim();
+      const isDev = process.env.NODE_ENV !== 'production';
+      const devBindRemote = (process.env.DEV_BIND_REMOTE || '').trim().toLowerCase() === 'true';
+
+      // In dev, default to loopback to avoid firewall/Vite proxy/WebSocket issues.
+      // Opt-out: DEV_BIND_REMOTE=true
+      if (isDev && !devBindRemote) {
+        return '127.0.0.1';
+      }
+
+      return raw || '127.0.0.1';
+    })(),
   },
   
   // Sécurité - CRITICAL: These MUST be set in production
@@ -52,7 +160,19 @@ export const config = {
   
   // Chemins
   paths: {
-    data: path.resolve(process.env.NODES_DATA_PATH || './data'),
+    // DATA_PATH (base) + NODES_DATA_PATH (dossier nodes) peuvent être configurés séparément.
+    // Compat: si NODES_DATA_PATH pointe vers "./data/nodes", on déduit data="./data".
+    data: (() => {
+      const explicit = process.env.DATA_PATH;
+      if (explicit) return path.resolve(explicit);
+      const nodesPath = process.env.NODES_DATA_PATH ? path.resolve(process.env.NODES_DATA_PATH) : '';
+      if (nodesPath && path.basename(nodesPath).toLowerCase() === 'nodes') {
+        return path.dirname(nodesPath);
+      }
+      // Ancien comportement: si NODES_DATA_PATH était un dossier racine, on le considère comme data.
+      if (nodesPath) return nodesPath;
+      return path.resolve('./data');
+    })(),
     nodes: path.resolve(process.env.NODES_DATA_PATH || './data/nodes'),
     wallets: path.resolve(process.env.WALLETS_DATA_PATH || './data/wallets'),
     logs: path.resolve(process.env.LOGS_PATH || './data/logs'),
@@ -60,8 +180,59 @@ export const config = {
   
   // Docker
   docker: {
-    socketPath: process.env.DOCKER_SOCKET || '/var/run/docker.sock',
+    // Par défaut: sockets locaux (named pipe Windows / unix socket ailleurs).
+    // Sécurité: DOCKER_HOST=tcp://... n'est autorisé QUE si loopback (localhost/127.0.0.1/::1).
+    // (Utile pour Docker Engine dans WSL2 exposé en localhost:2375)
+    socketPath: (() => {
+      const socketOverride = process.env.DOCKER_SOCKET;
+      if (socketOverride) return socketOverride;
+
+      const dockerHost = process.env.DOCKER_HOST;
+      if (dockerHost && !dockerHost.startsWith('tcp://')) {
+        if (dockerHost.startsWith('unix://')) return dockerHost.slice('unix://'.length);
+        if (dockerHost.startsWith('npipe://')) return dockerHost.replace(/^npipe:\/\//, '');
+        // Treat anything else as a socket path.
+        return dockerHost;
+      }
+
+      return process.platform === 'win32' ? '//./pipe/docker_engine' : '/var/run/docker.sock';
+    })(),
     networkName: 'node-orchestrator-network',
+    autoStart: process.env.DOCKER_AUTO_START !== 'false',
+    maxRetries: parseInt(process.env.DOCKER_MAX_RETRIES || '30'),
+    retryDelayMs: parseInt(process.env.DOCKER_RETRY_DELAY_MS || '4000'),
+  },
+
+  // API / sécurité HTTP
+  api: {
+    authMode: (process.env.API_AUTH_MODE || 'none').toLowerCase(), // none | basic | token
+    apiToken: process.env.API_TOKEN || '',
+    basicUser: process.env.API_BASIC_USER || '',
+    basicPass: process.env.API_BASIC_PASS || '',
+    allowedOrigins: (process.env.ALLOWED_ORIGINS || '')
+      .split(',')
+      .map(o => o.trim())
+      .filter(Boolean),
+    rateLimitEnabled: process.env.API_RATE_LIMIT_ENABLED !== 'false',
+  },
+
+  // Redémarrage auto des nodes
+  node: {
+    autoRestart: process.env.NODE_AUTO_RESTART !== 'false',
+    autoRestartMaxAttempts: parseInt(process.env.NODE_AUTO_RESTART_MAX_ATTEMPTS || '3'),
+    autoRestartDelayMs: parseInt(process.env.NODE_AUTO_RESTART_DELAY_MS || '10000'),
+    maxConcurrent: parseInt(process.env.NODE_MAX_CONCURRENT || '3'),
+    // Pull + démarrage + début de sync peuvent dépasser 60s: on étend le timeout par défaut
+    startTimeoutMs: parseInt(process.env.NODE_START_TIMEOUT_MS || '180000'),
+  },
+
+  // Seuils d'alertes système
+  alerts: {
+    cpuThreshold: parseInt(process.env.ALERT_CPU_THRESHOLD || '85'),
+    ramThreshold: parseInt(process.env.ALERT_RAM_THRESHOLD || '85'),
+    diskThresholdGB: parseInt(process.env.ALERT_DISK_THRESHOLD_GB || '20'),
+    healthcheckIntervalSeconds: parseInt(process.env.HEALTHCHECK_INTERVAL_SECONDS || '30'),
+    minSeverity: (process.env.ALERT_MIN_SEVERITY || 'warning').toLowerCase() as 'info' | 'warning' | 'critical',
   },
   
   // APIs externes (optionnel)
@@ -243,11 +414,31 @@ export function getNextAvailablePort(
   existingPorts: number[],
   blockchainDef?: any // Optional BlockchainDefinition to avoid circular imports
 ): { rpc: number; p2p: number; ws?: number } {
-  let defaultPorts: { rpc: number; p2p: number; ws?: number };
-  
+  let defaultPorts: { rpc: number; p2p: number; ws?: number } | undefined;
+
   // Utiliser blockchainRegistry si fourni, sinon utiliser BLOCKCHAIN_CONFIGS
-  if (blockchainDef && blockchainDef.mainnet) {
-    defaultPorts = blockchainDef.mainnet.defaultPorts;
+  if (blockchainDef) {
+    defaultPorts = blockchainDef.mainnet?.defaultPorts;
+
+    // Certains enregistrements n'ont pas de ports par défaut définis
+    if (!defaultPorts) {
+      switch (blockchainDef.chainType) {
+        case 'cosmos':
+          defaultPorts = { rpc: 26657, p2p: 26656, ws: 26657 };
+          break;
+        case 'evm':
+          defaultPorts = { rpc: 8545, p2p: 30303, ws: 8546 };
+          break;
+        case 'bitcoin':
+          defaultPorts = { rpc: 8332, p2p: 8333 };
+          break;
+        case 'solana':
+          defaultPorts = { rpc: 8899, p2p: 8001, ws: 8900 };
+          break;
+        default:
+          defaultPorts = { rpc: 8545, p2p: 30303, ws: 8546 };
+      }
+    }
   } else {
     // Fallback à BLOCKCHAIN_CONFIGS
     const config = BLOCKCHAIN_CONFIGS[blockchain];

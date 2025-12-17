@@ -9,10 +9,11 @@ const severityColor: Record<string, number> = {
 };
 
 export class DiscordNotifier {
-  constructor(private webhookUrl: string | undefined = process.env.DISCORD_WEBHOOK_URL) {}
+  constructor(private webhookUrl?: string) {}
 
   async send(alert: Alert): Promise<void> {
-    if (!this.webhookUrl) {
+    const url = this.webhookUrl || process.env.DISCORD_WEBHOOK_URL;
+    if (!url) {
       logger.debug('Discord webhook non configuré');
       return;
     }
@@ -27,7 +28,7 @@ export class DiscordNotifier {
       ].filter(Boolean),
     };
 
-    await axios.post(this.webhookUrl, { embeds: [embed] }, { timeout: 5000 });
+    await axios.post(url, { embeds: [embed] }, { timeout: 5000 });
   }
 
   private getTitle(type: string): string {

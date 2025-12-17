@@ -20,6 +20,7 @@ import path from 'path';
 import { BLOCKCHAIN_CONFIGS, config } from '../config';
 import { BlockchainType, NodeMode } from '../types';
 import { logger } from '../utils/logger';
+import { isNodeModeSupported } from './nodeSupport';
 
 // ============================================================
 // TYPES
@@ -241,9 +242,46 @@ async function checkCPU(): Promise<CheckDetail> {
  * Vérifie que Docker est disponible et fonctionnel
  */
 async function checkDocker(): Promise<CheckDetail> {
+  // Mode développement: permettre de continuer sans Docker en localhost
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isLocalhost = process.env.HOST === '127.0.0.1' || process.env.HOST === 'localhost' || !process.env.HOST;
+  const skipDockerCheck = process.env.SKIP_DOCKER_CHECK === 'true' || (isDevelopment && isLocalhost);
+
+  if (skipDockerCheck) {
+    logger.warn('Mode développement: vérification Docker ignorée');
+    return {
+      passed: true,
+      current: 1,
+      required: 1,
+      unit: 'status',
+      message: `[Mode Dev] Docker check ignoré (mode localhost)`,
+    };
+  }
+
   try {
     const Docker = require('dockerode');
-    const docker = new Docker({ socketPath: config.docker.socketPath });
+    const { getDockerConnectionAttempts } = require('../utils/dockerConnection');
+    const attempts = getDockerConnectionAttempts();
+
+    let docker: any = null;
+    let lastErr: any = null;
+    for (const a of attempts) {
+      try {
+        docker = new Docker(a.opts);
+        const pingPromise = docker.ping();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Docker ping timeout')), 2500));
+        await Promise.race([pingPromise, timeoutPromise]);
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        docker = null;
+      }
+    }
+
+    if (!docker) {
+      throw lastErr || new Error('Docker indisponible');
+    }
     
     // Tenter de ping Docker
     await docker.ping();
@@ -263,9 +301,9 @@ async function checkDocker(): Promise<CheckDetail> {
     
     let message = '⚠️ Docker non disponible. ';
     if (error.code === 'ENOENT') {
-      message += 'Le socket Docker n\'est pas accessible. Vérifiez que Docker Desktop est lancé.';
+      message += 'Socket Docker inaccessible. Vérifiez que Docker est installé et démarré (Docker Desktop OU Docker Engine dans WSL2).';
     } else if (error.code === 'ECONNREFUSED') {
-      message += 'Docker ne répond pas. Redémarrez Docker Desktop.';
+      message += 'Docker ne répond pas. Démarrez le daemon (Docker Desktop OU Docker Engine dans WSL2).';
     } else {
       message += error.message;
     }
@@ -336,7 +374,7 @@ export async function performSystemCheck(
   
   if (!memoryCheck.passed) {
     errors.push(memoryCheck.message);
-    if (mode !== 'light') {
+    if (mode !== 'light' && isNodeModeSupported(blockchain, 'light')) {
       recommendations.push(`Essayez le mode "light" qui nécessite moins de RAM`);
     }
   }

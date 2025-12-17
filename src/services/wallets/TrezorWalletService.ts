@@ -10,7 +10,6 @@ export class TrezorWalletService implements HardwareWalletService {
 
   private async loadTrezor(): Promise<any> {
     try {
-      // @ts-ignore - Optional dependency
       const mod = await import('@trezor/connect');
       return (mod as any).default || mod;
     } catch (error) {

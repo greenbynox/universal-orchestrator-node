@@ -1,3 +1,9 @@
+import { BLOCKCHAIN_CONFIGS } from '../config';
+import { blockchainRegistry } from '../config/blockchains';
+
+// Sets des blockchains supportées
+const SUPPORTED_CONFIG_BLOCKCHAINS = new Set(Object.keys(BLOCKCHAIN_CONFIGS));
+const SUPPORTED_REGISTRY_BLOCKCHAINS = new Set(blockchainRegistry.listIds());
 /**
  * ============================================================
  * NODE ORCHESTRATOR - Input Validation Utilities
@@ -36,10 +42,22 @@ export function validateNodeId(nodeId: string): boolean {
   if (!nodeId || typeof nodeId !== 'string') {
     return false;
   }
-  
+
   // Pattern: blockchain-8chars hexadecimaux
-  const pattern = /^(bitcoin|ethereum|solana|monero|bnb)-[a-f0-9]{8}$/;
-  return pattern.test(nodeId);
+  const pattern = /^([a-z0-9-]+)-([a-f0-9]{8})$/;
+  const match = nodeId.match(pattern);
+  if (!match) {
+    return false;
+  }
+
+  const blockchain = match[1];
+
+  // Vérifier que la blockchain est supportée (registry ou config déclarative)
+  if (!SUPPORTED_REGISTRY_BLOCKCHAINS.has(blockchain) && !SUPPORTED_CONFIG_BLOCKCHAINS.has(blockchain)) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -51,7 +69,7 @@ export function validateWalletId(walletId: string): boolean {
     return false;
   }
   
-  const pattern = /^wallet-(bitcoin|ethereum|solana|monero|bnb)-[a-f0-9]{8}$/;
+  const pattern = /^wallet-[a-z0-9-]+-[a-f0-9]{8}$/;
   return pattern.test(walletId);
 }
 
@@ -59,8 +77,13 @@ export function validateWalletId(walletId: string): boolean {
  * Valider un type de blockchain
  */
 export function validateBlockchain(blockchain: string): boolean {
-  const validBlockchains = ['bitcoin', 'ethereum', 'solana', 'monero', 'bnb'];
-  return validBlockchains.includes(blockchain);
+  // Vérifie le format (lettres minuscules, chiffres, tirets)
+  if (!/^[a-z0-9-]+$/.test(blockchain)) {
+    return false;
+  }
+
+  // Vérifie l'existence dans les blockchains supportées par la configuration (conservé pour compatibilité tests)
+  return SUPPORTED_CONFIG_BLOCKCHAINS.has(blockchain);
 }
 
 /**

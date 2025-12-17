@@ -455,4 +455,80 @@ export const DEFI_CHAINS: BlockchainDefinition[] = [
       defi: true,
     },
   }),
+  // ============================================================
+  // JITO
+  // ============================================================
+  {
+    id: 'jito',
+    name: 'Jito',
+    symbol: 'JTO',
+    category: 'defi',
+    chainType: 'solana',
+    consensus: 'other',
+    color: '#14F195',
+    mainnet: {
+      name: 'Jito (Solana)',
+      rpcUrls: ['https://api.mainnet-beta.solana.com'],
+    },
+    docker: {
+      images: {
+        full: 'jitolabs/jito-solana:latest',
+        pruned: 'jitolabs/jito-solana:latest',
+        light: 'jitolabs/jito-solana:latest',
+      },
+      requirements: {
+        full: { diskGB: 500, memoryGB: 16, syncDays: 2 },
+        pruned: { diskGB: 100, memoryGB: 8, syncDays: 1 },
+        light: { diskGB: 50, memoryGB: 4, syncDays: 0.5 },
+      },
+    },
+    wallet: {
+      derivationPath: "m/44'/501'/0'/0'",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://jito.network',
+    coingeckoId: 'jito-governance-token',
+    isActive: true,
+  },
+
+  // ============================================================
+  // ETHER.FI
+  // ============================================================
+  createEVMChain({
+    id: 'ether-fi',
+    name: 'Ether.fi',
+    symbol: 'ETHFI',
+    category: 'defi',
+    consensus: 'other',
+    color: '#627EEA',
+    chainId: 1,
+    mainnet: {
+      name: 'Ether.fi (Ethereum)',
+      rpcUrls: ['https://eth.llamarpc.com'],
+    },
+    website: 'https://www.ether.fi',
+    coingeckoId: 'ether-fi',
+    isActive: true,
+  }),
+
+  // ============================================================
+  // AEVO
+  // ============================================================
+  createEVMChain({
+    id: 'aevo',
+    name: 'Aevo',
+    symbol: 'AEVO',
+    category: 'defi',
+    consensus: 'other',
+    color: '#000000',
+    chainId: 1,
+    mainnet: {
+      name: 'Aevo (Ethereum)',
+      rpcUrls: ['https://eth.llamarpc.com'],
+    },
+    website: 'https://www.aevo.xyz',
+    coingeckoId: 'aevo-exchange',
+    isActive: true,
+  }),
 ];

@@ -355,4 +355,28 @@ export const MEME_CHAINS: BlockchainDefinition[] = [
     coingeckoId: 'cat-in-a-dogs-world',
     isActive: true,
   },
+  // ============================================================
+  // WEN
+  // ============================================================
+  {
+    id: 'wen',
+    name: 'Wen',
+    symbol: 'WEN',
+    category: 'meme',
+    chainType: 'solana',
+    consensus: 'other',
+    color: '#FFFFFF',
+    icon: '🐱',
+    mainnet: {
+      name: 'WEN (Solana)',
+      rpcUrls: ['https://api.mainnet-beta.solana.com'],
+    },
+    wallet: {
+      derivationPath: "m/44'/501'/0'/0'",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    coingeckoId: 'wen',
+    isActive: true,
+  },
 ];

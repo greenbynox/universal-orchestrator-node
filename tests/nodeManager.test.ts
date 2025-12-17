@@ -16,13 +16,15 @@ import {
 import { BLOCKCHAIN_CONFIGS, getNextAvailablePort } from '../src/config';
 
 // Mock Docker pour les tests unitaires
+// Note: en environnement minimal (ou CI custom), dockerode peut ne pas être présent dans node_modules.
+// On utilise donc un mock "virtual" pour ne pas dépendre du package à l'exécution des tests unitaires.
 jest.mock('dockerode', () => {
   return jest.fn().mockImplementation(() => ({
     createContainer: jest.fn(),
     getContainer: jest.fn(),
     listContainers: jest.fn(),
   }));
-});
+}, { virtual: true });
 
 describe('Node Types & Configuration', () => {
   

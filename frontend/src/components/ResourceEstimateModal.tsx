@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { systemApi, nodesApi } from '../services/api';
+import { nodesApi } from '../services/api';
 import { useStore } from '../store';
 import toast from 'react-hot-toast';
 import type { BlockchainType, NodeMode, SystemResources, BLOCKCHAIN_NAMES } from '../types';
@@ -44,65 +44,36 @@ interface Props {
 }
 
 export default function ResourceEstimateModal({ isOpen, onClose }: Props) {
-  const { addNode } = useStore();
+  const { addNode, systemResources, blockchains: storeBlockchains } = useStore();
   const [nodeName, setNodeName] = useState('');
   const [blockchain, setBlockchain] = useState<BlockchainType>('bitcoin');
   const [mode, setMode] = useState<NodeMode>('pruned');
-  const [resources, setResources] = useState<SystemResources | null>(null);
+  // Use store resources directly instead of making API call
+  const resources = systemResources;
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const loading = !systemResources; // Loading only if store hasn't loaded yet
   const [isCreating, setIsCreating] = useState(false);
-  const [blockchains, setBlockchains] = useState<any[]>([]);
+  // Use blockchains from store (already loaded by App.tsx)
+  const blockchains = storeBlockchains;
   const [searchTerm, setSearchTerm] = useState('');
   const [availableModes, setAvailableModes] = useState<BlockchainMode[]>([]);
   const [modesLoading, setModesLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setLoading(true);
       setError(null);
-      setResources(null);
-      
-      // Load system resources
-      const fetchResources = async () => {
-        try {
-          const res = await systemApi.getResources();
-          setResources(res);
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          setError(errMsg);
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      // Load blockchains
-      const fetchBlockchains = async () => {
-        try {
-          const chains = await systemApi.getBlockchains();
-          if (chains && chains.length > 0) {
-            setBlockchains(chains);
-            // Auto-select first blockchain if available
-            if (chains.length > 0) {
-              setBlockchain(chains[0].id as BlockchainType);
-            }
-          }
-        } catch (err) {
-          console.error('Error loading blockchains:', err);
-        }
-      };
-      
-      fetchResources();
-      fetchBlockchains();
+      // Blockchains are already in store, just set first one as default if needed
+      const supported = storeBlockchains.filter((bc: any) => bc?.nodeSupported !== false);
+      if (supported.length > 0 && blockchain === 'bitcoin') {
+        setBlockchain(supported[0].id as BlockchainType);
+      }
     } else {
-      setResources(null);
       setError(null);
-      setLoading(false);
       setNodeName('');
       setSearchTerm('');
       setIsCreating(false);
     }
-  }, [isOpen]);
+  }, [isOpen, storeBlockchains, blockchain]);
 
   // Load available modes for selected blockchain
   useEffect(() => {
@@ -203,14 +174,22 @@ export default function ResourceEstimateModal({ isOpen, onClose }: Props) {
   const memOk = resources && req ? resources.availableMemoryGB >= req.memory : true;
   const cpuOk = true;
 
+  const isBlockchainsLoading = !Array.isArray(blockchains) || blockchains.length === 0;
+
+  const supportedCount = !isBlockchainsLoading
+    ? blockchains.filter((bc: any) => bc?.nodeSupported === true).length
+    : 0;
+
   // Filter blockchains by search
-  const filteredBlockchains = blockchains.length > 0 
-    ? blockchains.filter(bc => 
-        bc.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        bc.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        bc.id?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : [];
+  const filteredBlockchains = (!isBlockchainsLoading ? blockchains : []).filter((bc: any) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      bc.name?.toLowerCase().includes(q) ||
+      bc.symbol?.toLowerCase().includes(q) ||
+      bc.id?.toLowerCase().includes(q)
+    );
+  });
 
   const handleCreateNode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,8 +240,12 @@ export default function ResourceEstimateModal({ isOpen, onClose }: Props) {
 
                 {/* Blockchain Selection with Search */}
                 <div>
-                  <label className="text-sm text-dark-400 block mb-2">Blockchain</label>
-                  {filteredBlockchains.length > 0 ? (
+                  <label className="text-sm text-dark-400 block mb-2">
+                    Blockchain {!isBlockchainsLoading && `(${supportedCount} supportées sur ${blockchains.length})`}
+                  </label>
+                  {isBlockchainsLoading ? (
+                    <div className="text-dark-400 text-sm">Chargement des blockchains...</div>
+                  ) : (
                     <>
                       <input 
                         type="text" 
@@ -271,29 +254,48 @@ export default function ResourceEstimateModal({ isOpen, onClose }: Props) {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="input-base w-full mb-3"
                       />
-                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-64 overflow-y-auto p-2 bg-dark-900 rounded-lg border border-dark-700">
-                        {filteredBlockchains.map((bc) => (
+
+                      {filteredBlockchains.length === 0 ? (
+                        <div className="bg-dark-900 rounded-lg border border-dark-700 p-4 text-center">
+                          <div className="text-dark-300 text-sm">Aucun résultat pour “{searchTerm.trim()}”.</div>
                           <button
-                            key={bc.id}
                             type="button"
-                            onClick={() => {
-                              setBlockchain(bc.id as BlockchainType);
-                              setSearchTerm('');
-                            }}
-                            className={`p-2 rounded text-center text-xs font-medium transition ${
-                              blockchain === bc.id
-                                ? 'bg-blue-600 text-white border border-blue-400'
-                                : 'bg-dark-700 text-dark-200 border border-dark-600 hover:border-blue-400'
-                            }`}
+                            onClick={() => setSearchTerm('')}
+                            className="mt-3 text-sm text-primary-400 hover:text-primary-300"
                           >
-                            {bc.symbol || bc.id.slice(0, 3).toUpperCase()}
+                            Effacer la recherche
                           </button>
-                        ))}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-64 overflow-y-auto p-2 bg-dark-900 rounded-lg border border-dark-700">
+                          {filteredBlockchains.map((bc: any) => (
+                            <button
+                              key={bc.id}
+                              type="button"
+                              onClick={() => {
+                                if (bc?.nodeSupported !== true) {
+                                  toast.error('Blockchain pas encore supportée pour la création de node');
+                                  return;
+                                }
+                                setBlockchain(bc.id as BlockchainType);
+                                setSearchTerm('');
+                              }}
+                              className={`p-2 rounded text-center text-xs font-medium transition ${
+                                bc?.nodeSupported !== true
+                                  ? 'opacity-40 cursor-not-allowed bg-dark-800 text-dark-400 border border-dark-700'
+                                  : (blockchain === bc.id
+                                    ? 'bg-blue-600 text-white border border-blue-400'
+                                    : 'bg-dark-700 text-dark-200 border border-dark-600 hover:border-blue-400')
+                              }`}
+                            >
+                              {bc.symbol || bc.id.slice(0, 3).toUpperCase()}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
                       <p className="text-xs text-dark-400 mt-2">Sélectionné: {blockchain}</p>
                     </>
-                  ) : (
-                    <div className="text-dark-400 text-sm">Chargement des blockchains...</div>
                   )}
                 </div>
 

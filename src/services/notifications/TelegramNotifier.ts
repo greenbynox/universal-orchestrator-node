@@ -12,14 +12,16 @@ export class TelegramNotifier {
   }
 
   async send(alert: Alert): Promise<void> {
-    if (!this.botToken || !this.chatId) {
+    const token = this.botToken || process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = this.chatId || process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) {
       logger.debug('Telegram non configuré');
       return;
     }
 
     const text = `${this.prefix(alert.severity)} ${alert.severity}: ${alert.message}`;
-    const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-    await axios.post(url, { chat_id: this.chatId, text }, { timeout: 5000 });
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    await axios.post(url, { chat_id: chatId, text }, { timeout: 5000 });
   }
 
   private prefix(severity: string): string {

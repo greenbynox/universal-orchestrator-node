@@ -45,6 +45,28 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // ============================================================
+// GET /wallets/blockchain/:blockchain - Wallets par blockchain
+// ============================================================
+router.get('/blockchain/:blockchain', async (req: Request, res: Response) => {
+  try {
+    const blockchain = req.params.blockchain as BlockchainType;
+    const wallets = walletManager.getWalletsByBlockchain(blockchain);
+
+    res.json({
+      success: true,
+      data: wallets,
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message,
+      timestamp: new Date(),
+    });
+  }
+});
+
+// ============================================================
 // GET /wallets/:id - Détails d'un wallet
 // ============================================================
 router.get('/:id', async (req: Request, res: Response) => {
@@ -57,9 +79,9 @@ router.get('/:id', async (req: Request, res: Response) => {
         timestamp: new Date(),
       });
     }
-    
+
     const wallet = walletManager.getWallet(walletId);
-    
+
     if (!wallet) {
       return res.status(404).json({
         success: false,
@@ -67,7 +89,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         timestamp: new Date(),
       });
     }
-    
+
     res.json({
       success: true,
       data: wallet,
@@ -87,7 +109,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // ============================================================
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, blockchain, importSeed } = req.body as CreateWalletRequest;
+    const { name, blockchain, importSeed, password } = req.body as CreateWalletRequest;
     
     // Validation
     if (!blockchain) {
@@ -106,12 +128,42 @@ router.post('/', async (req: Request, res: Response) => {
         timestamp: new Date(),
       });
     }
+
+    // Password required for software wallets
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Mot de passe requis',
+        timestamp: new Date(),
+      });
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: passwordValidation.reason,
+        timestamp: new Date(),
+      });
+    }
+
+    if (importSeed) {
+      const ok = validateSeedPhrase(importSeed);
+      if (!ok) {
+        return res.status(400).json({
+          success: false,
+          error: 'Seed phrase invalide',
+          timestamp: new Date(),
+        });
+      }
+    }
     
     // Créer le wallet
     const wallet = await walletManager.createWallet({
       name,
       blockchain,
       importSeed,
+      password,
     });
     
     res.status(201).json({
@@ -173,9 +225,9 @@ router.get('/:id/balance', async (req: Request, res: Response) => {
 });
 
 // ============================================================
-// POST /wallets/:id/export-seed - Exporter la seed (sensible!)
+// POST /wallets/:id/seed - Exporter la seed (sensible!)
 // ============================================================
-router.post('/:id/export-seed', seedExportLimiter, async (req: Request, res: Response) => {
+router.post('/:id/seed', seedExportLimiter, async (req: Request, res: Response) => {
   try {
     const walletId = sanitizeInput(req.params.id);
     if (!validateWalletId(walletId)) {
@@ -217,6 +269,94 @@ router.post('/:id/export-seed', seedExportLimiter, async (req: Request, res: Res
         seed,
         warning: 'Ne partagez JAMAIS cette seed phrase. Quiconque la possède peut accéder à vos fonds.',
       },
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message,
+      timestamp: new Date(),
+    });
+  }
+});
+
+// Backwards compatible alias
+router.post('/:id/export-seed', seedExportLimiter, async (req: Request, res: Response) => {
+  try {
+    const walletId = sanitizeInput(req.params.id);
+    if (!validateWalletId(walletId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de wallet invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Mot de passe requis',
+        timestamp: new Date(),
+      });
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: passwordValidation.reason,
+        timestamp: new Date(),
+      });
+    }
+
+    const seed = walletManager.exportSeed(walletId, password);
+    logger.warn(`Seed exportée pour wallet ${walletId} (legacy route)`, { ip: req.ip });
+
+    res.json({
+      success: true,
+      data: {
+        seed,
+        warning: 'Ne partagez JAMAIS cette seed phrase. Quiconque la possède peut accéder à vos fonds.',
+      },
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message,
+      timestamp: new Date(),
+    });
+  }
+});
+
+// ============================================================
+// POST /wallets/:id/verify-password - Vérifier le mot de passe (sans export)
+// ============================================================
+router.post('/:id/verify-password', async (req: Request, res: Response) => {
+  try {
+    const walletId = sanitizeInput(req.params.id);
+    if (!validateWalletId(walletId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de wallet invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    const { password } = req.body as { password?: string };
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Mot de passe requis',
+        timestamp: new Date(),
+      });
+    }
+
+    const valid = walletManager.verifyPassword(walletId, password);
+    res.json({
+      success: true,
+      data: { valid },
       timestamp: new Date(),
     });
   } catch (error) {
@@ -283,23 +423,4 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // ============================================================
 // GET /wallets/blockchain/:blockchain - Wallets par blockchain
 // ============================================================
-router.get('/blockchain/:blockchain', async (req: Request, res: Response) => {
-  try {
-    const blockchain = req.params.blockchain as BlockchainType;
-    const wallets = walletManager.getWalletsByBlockchain(blockchain);
-    
-    res.json({
-      success: true,
-      data: wallets,
-      timestamp: new Date(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-      timestamp: new Date(),
-    });
-  }
-});
-
 export default router;

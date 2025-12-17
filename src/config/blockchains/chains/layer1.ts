@@ -5,7 +5,7 @@
  * Bitcoin, Ethereum, Solana, Cardano, Polkadot, Avalanche, etc.
  */
 
-import { BlockchainDefinition } from '../types';
+import { BlockchainDefinition, createEVMChain } from '../types';
 
 export const LAYER1_CHAINS: BlockchainDefinition[] = [
   // ============================================================
@@ -694,5 +694,373 @@ export const LAYER1_CHAINS: BlockchainDefinition[] = [
       smartContracts: true,
       staking: true,
     },
+  },
+  // ============================================================
+  // RIPPLE (XRP)
+  // ============================================================
+  {
+    id: 'ripple',
+    name: 'XRP Ledger',
+    symbol: 'XRP',
+    aliases: ['ripple'],
+    category: 'layer1',
+    chainType: 'other',
+    consensus: 'other', // RPCA
+    color: '#23292F',
+    icon: '✕',
+    mainnet: {
+      name: 'XRP Ledger Mainnet',
+      defaultPorts: { rpc: 51234, p2p: 51235 },
+      rpcUrls: ['https://s1.ripple.com:51234/'],
+    },
+    wallet: {
+      derivationPath: "m/44'/144'/0'/0/0",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    explorers: [
+      { name: 'XRPScan', url: 'https://xrpscan.com' },
+    ],
+    website: 'https://xrpl.org',
+    coingeckoId: 'ripple',
+    isActive: true,
+  },
+
+  // ============================================================
+  // TRON
+  // ============================================================
+  createEVMChain({
+    id: 'tron',
+    name: 'TRON',
+    symbol: 'TRX',
+    category: 'layer1',
+    consensus: 'dpos',
+    color: '#FF0013',
+    icon: '♦',
+    chainId: 728126428,
+    mainnet: {
+      name: 'TRON Mainnet',
+      rpcUrls: ['https://api.trongrid.io'],
+    },
+    website: 'https://tron.network',
+    coingeckoId: 'tron',
+    isActive: true,
+  }),
+
+  // ============================================================
+  // ETHEREUM CLASSIC
+  // ============================================================
+  createEVMChain({
+    id: 'ethereum-classic',
+    name: 'Ethereum Classic',
+    symbol: 'ETC',
+    category: 'layer1',
+    consensus: 'pow',
+    color: '#328332',
+    chainId: 61,
+    mainnet: {
+      name: 'Ethereum Classic Mainnet',
+      rpcUrls: ['https://etc.rivet.link'],
+    },
+    website: 'https://ethereumclassic.org',
+    coingeckoId: 'ethereum-classic',
+    isActive: true,
+  }),
+
+  // ============================================================
+  // STELLAR
+  // ============================================================
+  {
+    id: 'stellar',
+    name: 'Stellar',
+    symbol: 'XLM',
+    category: 'layer1',
+    chainType: 'other',
+    consensus: 'other', // SCP
+    color: '#080000',
+    mainnet: {
+      name: 'Stellar Mainnet',
+      rpcUrls: ['https://horizon.stellar.org'],
+    },
+    wallet: {
+      derivationPath: "m/44'/148'/0'",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    explorers: [
+      { name: 'StellarExpert', url: 'https://stellar.expert' },
+    ],
+    website: 'https://stellar.org',
+    coingeckoId: 'stellar',
+    isActive: true,
+  },
+
+  // ============================================================
+  // KASPA
+  // ============================================================
+  {
+    id: 'kaspa',
+    name: 'Kaspa',
+    symbol: 'KAS',
+    category: 'layer1',
+    chainType: 'dag',
+    consensus: 'pow',
+    color: '#49C3B2',
+    mainnet: {
+      name: 'Kaspa Mainnet',
+      rpcUrls: ['https://api.kaspa.org'],
+    },
+    wallet: {
+      derivationPath: "m/44'/111111'/0'/0/0",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://kaspa.org',
+    coingeckoId: 'kaspa',
+    isActive: true,
+  },
+
+  // ============================================================
+  // VECHAIN
+  // ============================================================
+  {
+    id: 'vechain',
+    name: 'VeChain',
+    symbol: 'VET',
+    category: 'layer1',
+    chainType: 'other',
+    consensus: 'poa',
+    color: '#15BDFF',
+    mainnet: {
+      name: 'VeChain Mainnet',
+      rpcUrls: ['https://mainnet.veconn.org'],
+    },
+    wallet: {
+      derivationPath: "m/44'/818'/0'/0/0",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://vechain.org',
+    coingeckoId: 'vechain',
+    isActive: true,
+  },
+
+  // ============================================================
+  // MULTIVERSX (EGLD)
+  // ============================================================
+  {
+    id: 'multiversx',
+    name: 'MultiversX',
+    symbol: 'EGLD',
+    category: 'layer1',
+    chainType: 'other',
+    consensus: 'pos',
+    color: '#23F7DD',
+    mainnet: {
+      name: 'MultiversX Mainnet',
+      rpcUrls: ['https://gateway.multiversx.com'],
+    },
+    wallet: {
+      derivationPath: "m/44'/508'/0'/0'/0'",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://multiversx.com',
+    coingeckoId: 'elrond-erd-2',
+    isActive: true,
+  },
+
+  // ============================================================
+  // NEO
+  // ============================================================
+  {
+    id: 'neo',
+    name: 'NEO',
+    symbol: 'NEO',
+    category: 'layer1',
+    chainType: 'other',
+    consensus: 'other',
+    color: '#00E599',
+    mainnet: {
+      name: 'NEO Mainnet',
+      rpcUrls: ['https://mainnet1.neo.coz.io:443'],
+    },
+    wallet: {
+      derivationPath: "m/44'/888'/0'/0/0",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://neo.org',
+    coingeckoId: 'neo',
+    isActive: true,
+  },
+
+  // ============================================================
+  // EOS
+  // ============================================================
+  {
+    id: 'eos',
+    name: 'EOS',
+    symbol: 'EOS',
+    category: 'layer1',
+    chainType: 'other',
+    consensus: 'dpos',
+    color: '#000000',
+    mainnet: {
+      name: 'EOS Mainnet',
+      rpcUrls: ['https://eos.greymass.com'],
+    },
+    wallet: {
+      derivationPath: "m/44'/194'/0'/0/0",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://eosnetwork.com',
+    coingeckoId: 'eos',
+    isActive: true,
+  },
+
+  // ============================================================
+  // TERRA CLASSIC
+  // ============================================================
+  {
+    id: 'terra-luna',
+    name: 'Terra Classic',
+    symbol: 'LUNC',
+    category: 'layer1',
+    chainType: 'cosmos',
+    consensus: 'dpos',
+    color: '#FFD83D',
+    mainnet: {
+      name: 'Terra Classic Mainnet',
+      rpcUrls: ['https://terra-classic-lcd.publicnode.com'],
+    },
+    wallet: {
+      derivationPath: "m/44'/330'/0'/0/0",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://terra.money',
+    coingeckoId: 'terra-luna',
+    isActive: true,
+  },
+  // ============================================================
+  // MINA
+  // ============================================================
+  {
+    id: 'mina',
+    name: 'Mina Protocol',
+    symbol: 'MINA',
+    category: 'layer1',
+    chainType: 'other', // zk-SNARKs
+    consensus: 'pos',
+    color: '#2D2D2D',
+    mainnet: {
+      name: 'Mina Mainnet',
+      rpcUrls: ['https://api.minaexplorer.com'],
+    },
+    wallet: {
+      derivationPath: "m/44'/12586'/0'/0/0",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://minaprotocol.com',
+    coingeckoId: 'mina-protocol',
+    isActive: true,
+  },
+
+  // ============================================================
+  // CONFLUX
+  // ============================================================
+  createEVMChain({
+    id: 'conflux',
+    name: 'Conflux',
+    symbol: 'CFX',
+    category: 'layer1',
+    consensus: 'pow', // Tree-Graph
+    color: '#1E3DE4',
+    chainId: 1030,
+    mainnet: {
+      name: 'Conflux eSpace',
+      rpcUrls: ['https://evm.confluxrpc.com'],
+    },
+    website: 'https://confluxnetwork.org',
+    coingeckoId: 'conflux-token',
+    isActive: true,
+  }),
+
+  // ============================================================
+  // NERVOS NETWORK
+  // ============================================================
+  {
+    id: 'nervos',
+    name: 'Nervos Network',
+    symbol: 'CKB',
+    category: 'layer1',
+    chainType: 'utxo',
+    consensus: 'pow',
+    color: '#000000',
+    mainnet: {
+      name: 'Nervos Mainnet',
+      rpcUrls: ['https://mainnet.ckb.dev'],
+    },
+    wallet: {
+      derivationPath: "m/44'/309'/0'",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://nervos.org',
+    coingeckoId: 'nervos-network',
+    isActive: true,
+  },
+
+  // ============================================================
+  // ECASH
+  // ============================================================
+  {
+    id: 'ecash',
+    name: 'eCash',
+    symbol: 'XEC',
+    category: 'layer1',
+    chainType: 'utxo',
+    consensus: 'pow',
+    color: '#212C42',
+    mainnet: {
+      name: 'eCash Mainnet',
+      rpcUrls: ['https://rpc.ecash.global'],
+    },
+    wallet: {
+      derivationPath: "m/44'/899'/0'/0/0",
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://e.cash',
+    coingeckoId: 'ecash',
+    isActive: true,
+  },
+
+  // ============================================================
+  // HELIUM
+  // ============================================================
+  {
+    id: 'helium',
+    name: 'Helium',
+    symbol: 'HNT',
+    category: 'layer1',
+    chainType: 'solana', // Migrated to Solana
+    consensus: 'other', // PoC
+    color: '#474DFF',
+    mainnet: {
+      name: 'Helium (Solana)',
+      rpcUrls: ['https://api.mainnet-beta.solana.com'],
+    },
+    wallet: {
+      derivationPath: "m/44'/501'/0'/0'", // Solana path
+      supportsHD: true,
+      supportsMnemonic: true,
+    },
+    website: 'https://helium.com',
+    coingeckoId: 'helium',
+    isActive: true,
   },
 ];

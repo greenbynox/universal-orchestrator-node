@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -7,26 +8,40 @@ import {
   Cog6ToothIcon,
   Bars3Icon,
   XMarkIcon,
+  BellIcon,
   SignalIcon,
   SignalSlashIcon,
 } from '@heroicons/react/24/outline';
 import { useStore } from '../store';
+import { useLanguage } from '../i18n';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { path: '/', icon: HomeIcon, label: 'Dashboard' },
-  { path: '/nodes', icon: ServerStackIcon, label: 'Nodes' },
-  { path: '/alerts', icon: SignalIcon, label: 'Alertes' },
-  { path: '/wallets', icon: WalletIcon, label: 'Wallets' },
-  { path: '/settings', icon: Cog6ToothIcon, label: 'Paramètres' },
-];
-
 export default function Layout({ children }: LayoutProps) {
+  const { t } = useLanguage();
   const location = useLocation();
-  const { isConnected, sidebarOpen, setSidebarOpen, nodes } = useStore();
+  const {
+    isConnected,
+    sidebarOpen,
+    setSidebarOpen,
+    nodes,
+    logNotifications,
+    unreadLogNotifications,
+    markLogNotificationsRead,
+    clearLogNotifications,
+  } = useStore();
+
+  const [logsOpen, setLogsOpen] = useState(false);
+
+  const navItems = [
+    { path: '/', icon: HomeIcon, label: t('nav.dashboard') },
+    { path: '/nodes', icon: ServerStackIcon, label: t('nav.nodes') },
+    { path: '/alerts', icon: SignalIcon, label: t('nav.alerts') },
+    { path: '/wallets', icon: WalletIcon, label: t('nav.wallets') },
+    { path: '/settings', icon: Cog6ToothIcon, label: t('nav.settings') },
+  ];
 
   const runningNodes = nodes.filter(
     (n) => n.state?.status === 'ready' || n.state?.status === 'syncing'
@@ -85,11 +100,11 @@ export default function Layout({ children }: LayoutProps) {
                 <SignalSlashIcon className="w-4 h-4 text-red-500" />
               )}
               <span className="text-dark-400">
-                {isConnected ? 'Connecté' : 'Déconnecté'}
+                {isConnected ? t('layout.connected') : t('layout.disconnected')}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-dark-400">{runningNodes} node(s)</span>
+              <span className="text-dark-400">{t('dashboard.nodeCount', { count: runningNodes })}</span>
               <div
                 className={`w-2 h-2 rounded-full ${
                   runningNodes > 0 ? 'bg-green-500' : 'bg-dark-500'
@@ -121,7 +136,68 @@ export default function Layout({ children }: LayoutProps) {
             )}
           </button>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
+            <div className="relative">
+              <button
+                onClick={() => {
+                  const next = !logsOpen;
+                  setLogsOpen(next);
+                  if (next) markLogNotificationsRead();
+                }}
+                className="p-2 rounded-lg hover:bg-dark-800 transition-colors relative"
+                aria-label="Logs"
+                title="Logs"
+              >
+                <BellIcon className="w-6 h-6 text-dark-400" />
+                {unreadLogNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center">
+                    {unreadLogNotifications > 99 ? '99+' : unreadLogNotifications}
+                  </span>
+                )}
+              </button>
+
+              {logsOpen && (
+                <div className="absolute right-0 mt-2 w-[28rem] max-w-[90vw] bg-dark-900 border border-dark-700 rounded-xl shadow-xl overflow-hidden z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-dark-700">
+                    <div className="text-sm font-semibold text-white">Logs</div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => clearLogNotifications()}
+                        className="text-xs text-dark-300 hover:text-white"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={() => setLogsOpen(false)}
+                        className="text-xs text-dark-300 hover:text-white"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-80 overflow-auto">
+                    {logNotifications.length === 0 ? (
+                      <div className="px-4 py-6 text-sm text-dark-400">Aucun log</div>
+                    ) : (
+                      [...logNotifications]
+                        .slice(-30)
+                        .reverse()
+                        .map((n) => (
+                          <div key={n.id} className="px-4 py-3 border-b border-dark-800">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-sm text-white font-medium truncate">{n.nodeName || n.nodeId}</div>
+                              <div className="text-xs text-dark-500 shrink-0">{new Date(n.timestamp).toLocaleTimeString()}</div>
+                            </div>
+                            <div className="text-xs text-dark-300 mt-1 break-words">{n.message}</div>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="text-sm text-dark-400">
               v2.2.0
             </div>

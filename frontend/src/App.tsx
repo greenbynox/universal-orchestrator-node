@@ -8,25 +8,31 @@ import SettingsPage from './pages/SettingsPage';
 import AlertsHistoryPage from './pages/AlertsHistoryPage';
 import { nodesApi, walletsApi, systemApi } from './services/api';
 import { useStore } from './store';
+import { I18nProvider } from './i18n';
+import { wsService } from './services/websocket';
 
 function App() {
-  const { setNodes, setWallets, setSystemResources, setLoading, setConnected } = useStore();
+  const { setNodes, setWallets, setSystemResources, setBlockchains, setLoading, setConnected } = useStore();
 
   useEffect(() => {
+    // Real-time updates
+    wsService.connect();
+
     // Charger les données initiales
     const loadInitialData = async () => {
       setLoading(true);
       try {
-        const [nodes, wallets, resources] = await Promise.all([
+        const [nodes, wallets, resources, blockchains] = await Promise.all([
           nodesApi.getAll(),
           walletsApi.getAll(),
           systemApi.getResources(),
+          systemApi.getBlockchains().catch(() => []), // Non-critical, don't fail if missing
         ]);
         
         setNodes(nodes);
         setWallets(wallets);
         setSystemResources(resources);
-        setConnected(true);  // API is responding = connected
+        if (blockchains.length > 0) setBlockchains(blockchains);
       } catch (error) {
         console.error('Erreur chargement données:', error);
         setConnected(false);
@@ -46,25 +52,29 @@ function App() {
         ]);
         setNodes(nodes);
         setSystemResources(resources);
-        setConnected(true);
       } catch {
         setConnected(false);
       }
     }, 5000);
 
-    return () => clearInterval(interval);
-  }, [setNodes, setWallets, setSystemResources, setLoading, setConnected]);
+    return () => {
+      clearInterval(interval);
+      wsService.disconnect();
+    };
+  }, [setNodes, setWallets, setSystemResources, setBlockchains, setLoading, setConnected]);
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/nodes" element={<NodesPage />} />
-        <Route path="/wallets" element={<WalletsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/alerts" element={<AlertsHistoryPage />} />
-      </Routes>
-    </Layout>
+    <I18nProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/nodes" element={<NodesPage />} />
+          <Route path="/wallets" element={<WalletsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/alerts" element={<AlertsHistoryPage />} />
+        </Routes>
+      </Layout>
+    </I18nProvider>
   );
 }
 

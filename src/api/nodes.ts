@@ -88,6 +88,52 @@ router.get('/counts', async (_req: Request, res: Response) => {
 });
 
 // ============================================================
+// GET /nodes/:id/connection - Endpoints de connexion (RPC/WS/P2P)
+// ============================================================
+router.get('/:id/connection', async (req: Request, res: Response) => {
+  try {
+    const nodeId = secureSanitizeInput(req.params.id);
+    if (!validateNodeId(nodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de node invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    const info = nodeManager.getNodeConnectionInfo(nodeId);
+    res.json({ success: true, data: info, timestamp: new Date() });
+  } catch (error) {
+    const message = (error as Error).message;
+    const status = (/^Node non trouvé:/i.test(message) || /node non trouvé/i.test(message)) ? 404 : 500;
+    res.status(status).json({ success: false, error: message, timestamp: new Date() });
+  }
+});
+
+// ============================================================
+// GET /nodes/:id/rpc-test - Tester si le RPC répond
+// ============================================================
+router.get('/:id/rpc-test', async (req: Request, res: Response) => {
+  try {
+    const nodeId = secureSanitizeInput(req.params.id);
+    if (!validateNodeId(nodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de node invalide',
+        timestamp: new Date(),
+      });
+    }
+
+    const result = await nodeManager.testNodeRpc(nodeId);
+    res.json({ success: true, data: result, timestamp: new Date() });
+  } catch (error) {
+    const message = (error as Error).message;
+    const status = (/^Node non trouvé:/i.test(message) || /node non trouvé/i.test(message)) ? 404 : 500;
+    res.status(status).json({ success: false, error: message, timestamp: new Date() });
+  }
+});
+
+// ============================================================
 // GET /nodes/:id - Détails d'un node
 // ============================================================
 router.get('/:id', async (req: Request, res: Response) => {
@@ -195,7 +241,27 @@ router.post('/:id/start', async (req: Request, res: Response) => {
   } catch (error) {
     logger.error(`Erreur démarrage node ${req.params.id}`, { error });
     const message = (error as Error).message;
-    const status = /ressources insuffisantes/i.test(message) ? 400 : 500;
+    
+    // Déterminer le code de statut approprié
+    let status = 500;
+    if (/^Node non trouvé:/i.test(message) || /node non trouvé/i.test(message)) {
+      status = 404;
+    } else if (/déjà en cours d'exécution|déjà en cours d\s*exécution|already running|already.*execution/i.test(message)) {
+      // Idempotent start: treat as success.
+      return res.status(200).json({
+        success: true,
+        message: 'Node déjà en cours d\'exécution',
+        timestamp: new Date(),
+      });
+    } else if (/already in use|Conflict|\(HTTP code 409\)/i.test(message)) {
+      status = 409;
+    }
+    if (/ressources insuffisantes|docker|disponible/i.test(message)) {
+      status = 503; // Service Unavailable - Docker/ressources manquantes
+    } else if (/ressources insuffisantes/i.test(message)) {
+      status = 400; // Bad Request
+    }
+    
     res.status(status).json({
       success: false,
       error: message,
@@ -227,9 +293,11 @@ router.post('/:id/stop', async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error(`Erreur arrêt node ${req.params.id}`, { error });
-    res.status(500).json({
+    const message = (error as Error).message;
+    const status = (/^Node non trouvé:/i.test(message) || /node non trouvé/i.test(message)) ? 404 : 500;
+    res.status(status).json({
       success: false,
-      error: (error as Error).message,
+      error: message,
       timestamp: new Date(),
     });
   }
@@ -257,9 +325,16 @@ router.post('/:id/restart', async (req: Request, res: Response) => {
       timestamp: new Date(),
     });
   } catch (error) {
-    res.status(500).json({
+    const message = (error as Error).message;
+    let status = 500;
+    if (/^Node non trouvé:/i.test(message) || /node non trouvé/i.test(message)) {
+      status = 404;
+    } else if (/already in use|Conflict|\(HTTP code 409\)/i.test(message)) {
+      status = 409;
+    }
+    res.status(status).json({
       success: false,
-      error: (error as Error).message,
+      error: message,
       timestamp: new Date(),
     });
   }
@@ -287,9 +362,11 @@ router.delete('/:id', async (req: Request, res: Response) => {
       timestamp: new Date(),
     });
   } catch (error) {
-    res.status(500).json({
+    const message = (error as Error).message;
+    const status = (/^Node non trouvé:/i.test(message) || /node non trouvé/i.test(message)) ? 404 : 500;
+    res.status(status).json({
       success: false,
-      error: (error as Error).message,
+      error: message,
       timestamp: new Date(),
     });
   }

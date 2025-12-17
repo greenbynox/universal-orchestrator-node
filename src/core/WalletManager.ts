@@ -13,7 +13,6 @@ import * as ecc from 'tiny-secp256k1';
 import { Keypair } from '@solana/web3.js';
 import { derivePath } from 'ed25519-hd-key';
 import nacl from 'tweetnacl';
-import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -27,10 +26,27 @@ import {
 } from '../types';
 import { config, BLOCKCHAIN_CONFIGS } from '../config';
 import { logger } from '../utils/logger';
-import { encrypt, decrypt, generateSecureId } from '../utils/crypto';
+import {
+  decrypt,
+  decryptWithKey,
+  deriveKeyFromPassword,
+  encrypt,
+  encryptWithKey,
+  generateSecureId,
+  walletKeyVerifier,
+} from '../utils/crypto';
 
 // Initialize bip32
 const bip32 = BIP32Factory(ecc);
+
+const WALLET_SCRYPT_DEFAULTS = {
+  N: 16384,
+  r: 8,
+  p: 1,
+  dkLen: 32,
+  // 64 MiB: enough to avoid DoS via extreme defaults, while staying reasonable.
+  maxmem: 64 * 1024 * 1024,
+} as const;
 
 
 // ============================================================
@@ -103,11 +119,101 @@ export class WalletManager extends EventEmitter {
   // CRÉATION DE WALLETS
   // ============================================================
 
+  private isV2(secureData: WalletSecureData): boolean {
+    return secureData.version === 2 && !!secureData.kdf && !!secureData.verifier;
+  }
+
+  private deriveWalletKey(password: string, secureData: WalletSecureData): Buffer {
+    if (!secureData.kdf || secureData.kdf.algo !== 'scrypt') {
+      throw new Error('Wallet key derivation parameters missing');
+    }
+    const salt = Buffer.from(secureData.kdf.salt, 'base64');
+    return deriveKeyFromPassword(password, salt, {
+      N: secureData.kdf.N,
+      r: secureData.kdf.r,
+      p: secureData.kdf.p,
+      dkLen: secureData.kdf.dkLen,
+      maxmem: WALLET_SCRYPT_DEFAULTS.maxmem,
+    });
+  }
+
+  private verifyWalletPassword(wallet: StoredWallet, password: string): boolean {
+    if (!this.isV2(wallet.secureData)) {
+      return false;
+    }
+    if (!password) return false;
+    const key = this.deriveWalletKey(password, wallet.secureData);
+    const expected = Buffer.from(wallet.secureData.verifier!, 'base64');
+    const actual = walletKeyVerifier(key);
+    if (expected.length !== actual.length) return false;
+    return crypto.timingSafeEqual(expected, actual);
+  }
+
+  /**
+   * Migrate a legacy wallet (master-key encrypted seed) to password-based v2.
+   * The provided password becomes the wallet's password.
+   */
+  private migrateWalletToPassword(walletId: string, password: string): { seed: string } {
+    const wallet = this.wallets.get(walletId);
+    if (!wallet) {
+      throw new Error('Wallet non trouvé');
+    }
+
+    // Already migrated
+    if (this.isV2(wallet.secureData)) {
+      const seed = this.exportSeed(walletId, password);
+      return { seed };
+    }
+
+    if (!wallet.secureData.encryptedSeed || !wallet.secureData.encryptedPrivateKey) {
+      throw new Error('Wallet non migrable (seed absente)');
+    }
+
+    const seed = decrypt(wallet.secureData.encryptedSeed);
+    const privateKey = decrypt(wallet.secureData.encryptedPrivateKey);
+
+    const salt = crypto.randomBytes(16);
+    const key = deriveKeyFromPassword(password, salt, {
+      N: WALLET_SCRYPT_DEFAULTS.N,
+      r: WALLET_SCRYPT_DEFAULTS.r,
+      p: WALLET_SCRYPT_DEFAULTS.p,
+      dkLen: WALLET_SCRYPT_DEFAULTS.dkLen,
+      maxmem: WALLET_SCRYPT_DEFAULTS.maxmem,
+    });
+
+    wallet.secureData.version = 2;
+    wallet.secureData.kdf = {
+      algo: 'scrypt',
+      salt: salt.toString('base64'),
+      N: WALLET_SCRYPT_DEFAULTS.N,
+      r: WALLET_SCRYPT_DEFAULTS.r,
+      p: WALLET_SCRYPT_DEFAULTS.p,
+      dkLen: WALLET_SCRYPT_DEFAULTS.dkLen,
+    };
+    wallet.secureData.verifier = walletKeyVerifier(key).toString('base64');
+    wallet.secureData.encryptedSeedV2 = encryptWithKey(seed, key);
+    wallet.secureData.encryptedPrivateKeyV2 = encryptWithKey(privateKey, key);
+
+    // Remove legacy master-key protected secrets.
+    wallet.secureData.encryptedSeed = undefined;
+    wallet.secureData.encryptedPrivateKey = undefined;
+
+    this.saveWallets();
+    logger.info(`Wallet migrated to password-based encryption: ${walletId}`);
+    this.emit('wallet:migrated', walletId);
+
+    return { seed };
+  }
+
   /**
    * Créer un nouveau wallet HD
    */
-  async createWallet(request: CreateWalletRequest): Promise<WalletInfo> {
-    const { name, blockchain, importSeed } = request;
+  async createWallet(request: CreateWalletRequest): Promise<WalletInfo & { mnemonic: string }> {
+    const { name, blockchain, importSeed, password } = request;
+
+    if (!password) {
+      throw new Error('Mot de passe requis');
+    }
     
     // Générer ou utiliser la seed fournie
     let mnemonic: string;
@@ -140,9 +246,28 @@ export class WalletManager extends EventEmitter {
     };
 
     // Données sécurisées (chiffrées)
+    const salt = crypto.randomBytes(16);
+    const key = deriveKeyFromPassword(password, salt, {
+      N: WALLET_SCRYPT_DEFAULTS.N,
+      r: WALLET_SCRYPT_DEFAULTS.r,
+      p: WALLET_SCRYPT_DEFAULTS.p,
+      dkLen: WALLET_SCRYPT_DEFAULTS.dkLen,
+      maxmem: WALLET_SCRYPT_DEFAULTS.maxmem,
+    });
+
     const secureData: WalletSecureData = {
-      encryptedSeed: encrypt(mnemonic),
-      encryptedPrivateKey: encrypt(privateKey),
+      version: 2,
+      kdf: {
+        algo: 'scrypt',
+        salt: salt.toString('base64'),
+        N: WALLET_SCRYPT_DEFAULTS.N,
+        r: WALLET_SCRYPT_DEFAULTS.r,
+        p: WALLET_SCRYPT_DEFAULTS.p,
+        dkLen: WALLET_SCRYPT_DEFAULTS.dkLen,
+      },
+      verifier: walletKeyVerifier(key).toString('base64'),
+      encryptedSeedV2: encryptWithKey(mnemonic, key),
+      encryptedPrivateKeyV2: encryptWithKey(privateKey, key),
       publicKey,
       address,
     };
@@ -161,6 +286,8 @@ export class WalletManager extends EventEmitter {
       blockchain,
       address,
       createdAt: walletConfig.createdAt,
+      // Returned once for UI display/backup.
+      mnemonic,
     };
   }
 
@@ -422,19 +549,51 @@ export class WalletManager extends EventEmitter {
       throw new Error('Wallet non trouvé');
     }
 
-    // Vérification du mot de passe
-    // TODO: Implémenter une vraie vérification avec hash stocké
-    if (!password || password.length < 8) {
-      throw new Error('Mot de passe requis (minimum 8 caractères)');
+    if (!password) {
+      throw new Error('Mot de passe requis');
     }
 
-    // Déchiffrer la seed
-    const seed = decrypt(wallet.secureData.encryptedSeed!);
+    // Legacy wallet: migrate on first use.
+    if (!this.isV2(wallet.secureData)) {
+      const migrated = this.migrateWalletToPassword(walletId, password);
+      logger.warn(`Seed exportée pour wallet ${walletId} (auto-migration)`);
+      this.emit('wallet:seed-exported', walletId);
+      return migrated.seed;
+    }
+
+    // Verify password
+    if (!this.verifyWalletPassword(wallet, password)) {
+      throw new Error('Mot de passe invalide');
+    }
+
+    const key = this.deriveWalletKey(password, wallet.secureData);
+    if (!wallet.secureData.encryptedSeedV2) {
+      throw new Error('Seed introuvable');
+    }
+
+    const seed = decryptWithKey(wallet.secureData.encryptedSeedV2, key);
     
     logger.warn(`Seed exportée pour wallet ${walletId}`);
     this.emit('wallet:seed-exported', walletId);
 
     return seed;
+  }
+
+  /**
+   * Verify password without revealing the seed.
+   */
+  verifyPassword(walletId: string, password: string): boolean {
+    const wallet = this.wallets.get(walletId);
+    if (!wallet) {
+      throw new Error('Wallet non trouvé');
+    }
+
+    // Legacy wallet: no password set yet.
+    if (!this.isV2(wallet.secureData)) {
+      return false;
+    }
+
+    return this.verifyWalletPassword(wallet, password);
   }
 
   /**
