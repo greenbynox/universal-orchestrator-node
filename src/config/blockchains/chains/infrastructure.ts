@@ -136,6 +136,10 @@ export const INFRASTRUCTURE_CHAINS: BlockchainDefinition[] = [
       rpcUrls: ['https://celestia-rpc.polkachu.com'],
       explorerUrls: ['https://celenium.io'],
     },
+    docker: {
+      images: { full: 'celestiaorg/celestia-node:latest' },
+      requirements: { full: { diskGB: 100, memoryGB: 8, syncDays: 2 } }
+    },
     wallet: {
       derivationPath: "m/44'/118'/0'/0/0",
       addressPrefix: 'celestia',
@@ -257,6 +261,10 @@ export const INFRASTRUCTURE_CHAINS: BlockchainDefinition[] = [
       rpcUrls: ['https://injective-rpc.polkachu.com'],
       explorerUrls: ['https://explorer.injective.network'],
     },
+    docker: {
+      images: { full: 'injectivelabs/injective-core:latest' },
+      requirements: { full: { diskGB: 200, memoryGB: 16, syncDays: 2 } }
+    },
     wallet: {
       derivationPath: "m/44'/60'/0'/0/0",
       addressPrefix: 'inj',
@@ -282,6 +290,10 @@ export const INFRASTRUCTURE_CHAINS: BlockchainDefinition[] = [
       name: 'Sei Network',
       rpcUrls: ['https://sei-rpc.polkachu.com'],
       explorerUrls: ['https://seistream.app'],
+    },
+    docker: {
+      images: { full: 'sei-protocol/sei-chain:latest' },
+      requirements: { full: { diskGB: 100, memoryGB: 8, syncDays: 2 } }
     },
     wallet: {
       derivationPath: "m/44'/118'/0'/0/0",

@@ -138,6 +138,14 @@ export const LAYER2_CHAINS: BlockchainDefinition[] = [
       name: 'Arbitrum Nova',
       rpcUrls: ['https://nova.arbitrum.io/rpc'],
     },
+    docker: {
+      images: {
+        full: 'offchainlabs/nitro-node:latest',
+      },
+      requirements: {
+        full: { diskGB: 500, memoryGB: 16, syncDays: 3 },
+      },
+    },
     explorers: [
       { name: 'Nova Arbiscan', url: 'https://nova.arbiscan.io' },
     ],
@@ -164,6 +172,14 @@ export const LAYER2_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'StarkNet Mainnet',
       rpcUrls: ['https://starknet-mainnet.public.blastapi.io'],
+    },
+    docker: {
+      images: {
+        full: 'eqlabs/pathfinder:latest',
+      },
+      requirements: {
+        full: { diskGB: 100, memoryGB: 8, syncDays: 3 },
+      },
     },
     wallet: {
       derivationPath: "m/44'/9004'/0'/0/0",
@@ -198,6 +214,14 @@ export const LAYER2_CHAINS: BlockchainDefinition[] = [
       name: 'Immutable zkEVM',
       rpcUrls: ['https://rpc.immutable.com'],
     },
+    docker: {
+      images: {
+        full: 'immutable/immutable-x:latest',
+      },
+      requirements: {
+        full: { diskGB: 100, memoryGB: 8, syncDays: 2 },
+      },
+    },
     explorers: [
       { name: 'Immutable Explorer', url: 'https://explorer.immutable.com' },
     ],
@@ -226,6 +250,14 @@ export const LAYER2_CHAINS: BlockchainDefinition[] = [
       name: 'Loopring',
       rpcUrls: ['https://api3.loopring.io'],
     },
+    docker: {
+      images: {
+        full: 'loopring/loopring-protocol:latest',
+      },
+      requirements: {
+        full: { diskGB: 100, memoryGB: 8, syncDays: 2 },
+      },
+    },
     explorers: [
       { name: 'Loopring Explorer', url: 'https://explorer.loopring.io' },
     ],
@@ -252,6 +284,14 @@ export const LAYER2_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'Blast Mainnet',
       rpcUrls: ['https://rpc.blast.io'],
+    },
+    docker: {
+      images: {
+        full: 'blastio/blast-geth:latest',
+      },
+      requirements: {
+        full: { diskGB: 300, memoryGB: 16, syncDays: 2 },
+      },
     },
     explorers: [
       { name: 'Blastscan', url: 'https://blastscan.io' },
@@ -281,6 +321,14 @@ export const LAYER2_CHAINS: BlockchainDefinition[] = [
       name: 'Mode Mainnet',
       rpcUrls: ['https://mainnet.mode.network'],
     },
+    docker: {
+      images: {
+        full: 'mode-network/mode:latest',
+      },
+      requirements: {
+        full: { diskGB: 100, memoryGB: 8, syncDays: 2 },
+      },
+    },
     explorers: [
       { name: 'Mode Explorer', url: 'https://explorer.mode.network' },
     ],
@@ -306,6 +354,14 @@ export const LAYER2_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'Manta Pacific',
       rpcUrls: ['https://pacific-rpc.manta.network/http'],
+    },
+    docker: {
+      images: {
+        full: 'manta-network/manta:latest',
+      },
+      requirements: {
+        full: { diskGB: 200, memoryGB: 8, syncDays: 2 },
+      },
     },
     explorers: [
       { name: 'Manta Explorer', url: 'https://pacific-explorer.manta.network' },
@@ -334,6 +390,14 @@ export const LAYER2_CHAINS: BlockchainDefinition[] = [
       name: 'Taiko Mainnet',
       rpcUrls: ['https://rpc.mainnet.taiko.xyz'],
     },
+    docker: {
+      images: {
+        full: 'taikoxyz/simple-taiko-node:latest',
+      },
+      requirements: {
+        full: { diskGB: 100, memoryGB: 8, syncDays: 2 },
+      },
+    },
     explorers: [
       { name: 'Taikoscan', url: 'https://taikoscan.io' },
     ],
@@ -359,6 +423,14 @@ export const LAYER2_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'Zora Mainnet',
       rpcUrls: ['https://rpc.zora.energy'],
+    },
+    docker: {
+      images: {
+        full: 'conduitxyz/node:latest',
+      },
+      requirements: {
+        full: { diskGB: 100, memoryGB: 8, syncDays: 2 },
+      },
     },
     explorers: [
       { name: 'Zora Explorer', url: 'https://explorer.zora.energy' },

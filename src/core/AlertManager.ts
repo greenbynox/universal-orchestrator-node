@@ -52,9 +52,9 @@ export class AlertManager extends EventEmitter {
     } catch (error: any) {
       // Foreign key constraint error - node doesn't exist anymore
       if (error.code === 'P2003') {
-        logger.warn(`Node ${alert.nodeId} not found for alert ${alert.type}, skipping persistence`, { 
+        logger.warn(`Node ${alert.nodeId} not found for alert ${alert.type}, skipping persistence`, {
           error: error.message,
-          nodeId: alert.nodeId 
+          nodeId: alert.nodeId
         });
         return null;
       }
@@ -228,6 +228,10 @@ export class AlertManager extends EventEmitter {
         metadata: a.metadata ? JSON.parse(a.metadata as unknown as string) : undefined,
       })),
     };
+  }
+  async clearAll(): Promise<number> {
+    const result = await prisma.alert.deleteMany({});
+    return result.count;
   }
 }
 

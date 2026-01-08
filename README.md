@@ -1,8 +1,9 @@
-# 🚀 Node Orchestrator v2.3.0
+# 🚀 Node Orchestrator v2.3.1 - 77 Blockchains Supportées
 
 <div align="center">
 
 **Refonte Architecturale Data-Driven – Infrastructure Blockchain Modulaire & Sécurisée**
+**Blockchain (77 supportées sur 227)**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
@@ -23,7 +24,7 @@
 
 ---
 
-## ✨ Version 2.3.0 – Stabilité (WSL2/Docker), Sécurité & Expérience Dev
+## ✨ Version 2.3.1 – Stabilité (WSL2/Docker), Sécurité & Expérience Dev
 
 ### 🔧 Quoi de Neuf en v2.3.0
 
@@ -36,18 +37,18 @@
 
 | Architecture Modulaire | Sécurité Renforcée | Infrastructure Stable |
 |:---:|:---:|:---:|
-| **Templates YAML** config-as-code | **Isolation Socket Docker** + whitelist stricte | **Prisma SQLite** temps réel |
+| **Config TypeScript** modulaire | **Isolation Socket Docker** + whitelist stricte | **Prisma SQLite** temps réel |
 | Ajouter une blockchain = 10x plus facile | `sanitizeInput` systématique + AES-256 | Zero-crash avec health checks |
 | Réutilisable & extensible | Containers sandboxés + validation stricte | Observabilité complète |
 
 ### 🔧 Quoi de Neuf en v2.2.0
 
-#### 1. **Architecture Modulaire (YAML Config-as-Code)** 📝
-- Chaque blockchain est définie dans `src/templates/*.yaml` (Bitcoin, Ethereum, Solana, etc.)
-- Template inclut : image Docker, ports, volumes, ressources, healthchecks, patterns IA
-- **TemplateManager** parse automatiquement et injecte dans la configuration Docker
-- **Bénéfice** : Ajouter une nouvelle blockchain sans modifier le code TypeScript
-- **Exemple** : `src/templates/bitcoin_full.yaml` avec kylemanna/bitcoind:latest ✅
+#### 1. **Architecture Modulaire (TypeScript Config)** 📝
+- Chaque blockchain est définie dans `src/config/blockchains/chains/*.ts` (Bitcoin, Ethereum, Solana, etc.)
+- Config inclut : image Docker, ports, volumes, ressources, healthchecks
+- **blockchainRegistry** centralise et valide automatiquement les configurations
+- **Bénéfice** : Ajouter une nouvelle blockchain facilement avec typage complet
+- **Exemple** : `src/config/blockchains/chains/layer1.ts` avec configurations complètes ✅
 
 #### 2. **Sécurité Renforcée – Docker Socket Isolation** 🛡️
 - Whitelist stricte d'images (50+ images vérifiées, patterns `ghcr.io/*`, `kylemanna/*`)
@@ -72,9 +73,9 @@
 
 ---
 
-## ✨ Fonctionnalités v2.3.0
+## ✨ Fonctionnalités v2.3.1
 
-### 🔗 205+ Blockchains Supportées
+### 🔗 Blockchain (77 supportées sur 227)
 
 <table>
 <tr>
@@ -122,10 +123,13 @@
 
 ### Windows (Recommandé)
 
-> **[📥 Télécharger Node Orchestrator v2.3.0 (Windows)](https://github.com/greenbynox/universal-orchestrator-node/releases)**
+> **[📥 Télécharger Node Orchestrator v2.3.1 (Windows/Linux/Mac)](https://github.com/greenbynox/universal-orchestrator-node/releases)**
 
-- `Node Orchestrator-2.0.0-Setup.exe` - Installateur Windows
-- `Node Orchestrator-2.3.0-Portable.exe` - Version portable (aucune installation, **Docker Desktop doit déjà être installé**)
+- **Windows**: `Node Orchestrator-2.3.1-Portable.exe` (Version portable, pas d'installation requise)
+- **Linux**: `Node Orchestrator-2.3.1.AppImage` (Exécutable portable)
+- **macOS**: `Node Orchestrator-2.3.1-mac.zip` (Application portable)
+
+> Note: **Docker Desktop doit être installé** sur votre machine pour que l'orchestrateur fonctionne.
 
 ### Depuis les sources
 
@@ -203,7 +207,7 @@ npm run start:dev
 
 1. Ouvrez l'application
 2. Cliquez sur **"Nouveau Node"**
-3. Sélectionnez la blockchain parmi 205+ options
+3. Sélectionnez la blockchain parmi **77 options supportées** (sur 227 visibles)
 4. Choisissez le mode (Full, Pruned, Light)
 5. Cliquez sur **"Créer"** – Le container démarre automatiquement
 
@@ -273,7 +277,7 @@ universal-orchestrator-node/
 | **Crypto** | bip39, AES-256-GCM, PBKDF2 |
 | **BD** | Prisma ORM + SQLite |
 | **Configuration** | YAML Templates |
-| **Build** | electron-builder (NSIS) |
+| **Build** | electron-builder (Portable, AppImage, Zip) |
 
 ---
 
@@ -336,7 +340,7 @@ DELETE /api/wallets/:id        # Supprimer
 # Système
 GET    /api/system/resources   # CPU, RAM, Disk
 GET    /api/system/health      # Health check
-GET    /api/blockchains        # Liste des 205+ blockchains
+GET    /api/blockchains        # Liste des 77 blockchains supportées (sur 227)
 ```
 
 ---
@@ -437,7 +441,7 @@ Ce projet est sous licence **MIT** - voir le fichier [LICENSE](LICENSE) pour plu
 
 🌐 Décentralisation pour tous 🌐
 
-<sub>v2.3.0 - Stabilité WSL2/Docker, Sécurité & Dev UX</sub>
-<sub>Décembre 2025</sub>
+<sub>v2.3.1 - Stabilité WSL2/Docker, Sécurité & Dev UX</sub>
+<sub>Janvier 2026</sub>
 
 </div>

@@ -33,4 +33,13 @@ router.post('/:id/resolve', async (req, res) => {
   }
 });
 
+router.delete('/', async (req, res) => {
+  try {
+    const count = await alertService.clearAll();
+    res.json({ success: true, count });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 export default router;

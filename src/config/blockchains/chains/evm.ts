@@ -312,6 +312,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
       name: 'Aurora Mainnet',
       rpcUrls: ['https://mainnet.aurora.dev'],
     },
+    docker: {
+      images: {
+        full: 'aurora-is-near/aurora-engine:latest',
+      },
+      requirements: {
+        full: { diskGB: 100, memoryGB: 8, syncDays: 2 },
+      },
+    },
     explorers: [
       { name: 'Aurorascan', url: 'https://aurorascan.dev' },
     ],
@@ -337,6 +345,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'Kava EVM',
       rpcUrls: ['https://evm.kava.io', 'https://evm2.kava.io'],
+    },
+    docker: {
+      images: {
+        full: 'kava/kava:latest',
+      },
+      requirements: {
+        full: { diskGB: 300, memoryGB: 16, syncDays: 5 },
+      },
     },
     explorers: [
       { name: 'Kavascan', url: 'https://kavascan.com' },
@@ -391,6 +407,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
       name: 'Metis Andromeda',
       rpcUrls: ['https://andromeda.metis.io/?owner=1088'],
     },
+    docker: {
+      images: {
+        full: 'metis-network/l2geth:latest',
+      },
+      requirements: {
+        full: { diskGB: 200, memoryGB: 8, syncDays: 3 },
+      },
+    },
     explorers: [
       { name: 'Andromeda Explorer', url: 'https://andromeda-explorer.metis.io' },
     ],
@@ -417,6 +441,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
       name: 'Boba Network',
       rpcUrls: ['https://mainnet.boba.network'],
     },
+    docker: {
+      images: {
+        full: 'bobanetwork/l2geth:latest',
+      },
+      requirements: {
+        full: { diskGB: 150, memoryGB: 8, syncDays: 2 },
+      },
+    },
     explorers: [
       { name: 'Bobascan', url: 'https://bobascan.com' },
     ],
@@ -442,6 +474,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'Evmos Mainnet',
       rpcUrls: ['https://evmos-evm.publicnode.com'],
+    },
+    docker: {
+      images: {
+        full: 'tharsis/evmos:latest',
+      },
+      requirements: {
+        full: { diskGB: 300, memoryGB: 16, syncDays: 4 },
+      },
     },
     explorers: [
       { name: 'Mintscan', url: 'https://www.mintscan.io/evmos' },
@@ -470,6 +510,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
       name: 'Harmony Mainnet',
       rpcUrls: ['https://api.harmony.one', 'https://harmony.publicnode.com'],
     },
+    docker: {
+      images: {
+        full: 'harmony/node:latest',
+      },
+      requirements: {
+        full: { diskGB: 300, memoryGB: 8, syncDays: 3 },
+      },
+    },
     explorers: [
       { name: 'Harmony Explorer', url: 'https://explorer.harmony.one' },
     ],
@@ -497,6 +545,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
       name: 'Fuse Mainnet',
       rpcUrls: ['https://rpc.fuse.io'],
     },
+    docker: {
+      images: {
+        full: 'fuseio/fuse-network:latest',
+      },
+      requirements: {
+        full: { diskGB: 100, memoryGB: 8, syncDays: 2 },
+      },
+    },
     explorers: [
       { name: 'Fuse Explorer', url: 'https://explorer.fuse.io' },
     ],
@@ -522,6 +578,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'Oasis Emerald',
       rpcUrls: ['https://emerald.oasis.dev'],
+    },
+    docker: {
+      images: {
+        full: 'oasisprotocol/oasis-core:latest',
+      },
+      requirements: {
+        full: { diskGB: 200, memoryGB: 16, syncDays: 3 },
+      },
     },
     explorers: [
       { name: 'Oasis Explorer', url: 'https://explorer.emerald.oasis.dev' },
@@ -550,6 +614,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
       name: 'Astar Network',
       rpcUrls: ['https://evm.astar.network'],
     },
+    docker: {
+      images: {
+        full: 'staketechnologies/astar-collator:latest',
+      },
+      requirements: {
+        full: { diskGB: 300, memoryGB: 16, syncDays: 3 },
+      },
+    },
     explorers: [
       { name: 'Astar Subscan', url: 'https://astar.subscan.io' },
     ],
@@ -576,6 +648,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'Mantle Mainnet',
       rpcUrls: ['https://rpc.mantle.xyz'],
+    },
+    docker: {
+      images: {
+        full: 'mantlenetworkio/mantle:latest',
+      },
+      requirements: {
+        full: { diskGB: 200, memoryGB: 8, syncDays: 2 },
+      },
     },
     explorers: [
       { name: 'Mantle Explorer', url: 'https://explorer.mantle.xyz' },
@@ -604,6 +684,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
       name: 'Linea Mainnet',
       rpcUrls: ['https://rpc.linea.build'],
     },
+    docker: {
+      images: {
+        full: 'consensys/linea:latest',
+      },
+      requirements: {
+        full: { diskGB: 100, memoryGB: 8, syncDays: 2 },
+      },
+    },
     explorers: [
       { name: 'Lineascan', url: 'https://lineascan.build' },
     ],
@@ -629,6 +717,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'Scroll Mainnet',
       rpcUrls: ['https://rpc.scroll.io'],
+    },
+    docker: {
+      images: {
+        full: 'scroll-tech/scroll-node:latest',
+      },
+      requirements: {
+        full: { diskGB: 200, memoryGB: 16, syncDays: 3 },
+      },
     },
     explorers: [
       { name: 'Scrollscan', url: 'https://scrollscan.com' },
@@ -656,6 +752,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
       name: 'zkSync Era Mainnet',
       rpcUrls: ['https://mainnet.era.zksync.io'],
     },
+    docker: {
+      images: {
+        full: 'matterlabs/external-node:latest',
+      },
+      requirements: {
+        full: { diskGB: 500, memoryGB: 16, syncDays: 3 },
+      },
+    },
     explorers: [
       { name: 'zkSync Explorer', url: 'https://explorer.zksync.io' },
     ],
@@ -681,6 +785,14 @@ export const EVM_CHAINS: BlockchainDefinition[] = [
     mainnet: {
       name: 'Polygon zkEVM',
       rpcUrls: ['https://zkevm-rpc.com'],
+    },
+    docker: {
+      images: {
+        full: 'hermeznetwork/zkevm-node:latest',
+      },
+      requirements: {
+        full: { diskGB: 500, memoryGB: 16, syncDays: 5 },
+      },
     },
     explorers: [
       { name: 'Polygon zkEVM Explorer', url: 'https://zkevm.polygonscan.com' },

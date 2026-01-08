@@ -1,8 +1,8 @@
 import axios from 'axios';
-import type { 
-  NodeInfo, 
-  WalletInfo, 
-  SystemResources, 
+import type {
+  NodeInfo,
+  WalletInfo,
+  SystemResources,
   NodeModeRecommendation,
   NodeConnectionInfo,
   NodeRpcTestResult,
@@ -350,6 +350,9 @@ export const alertsApi = {
   },
   resolve: async (id: string): Promise<void> => {
     await api.post(`/alerts/${id}/resolve`);
+  },
+  deleteAll: async (): Promise<void> => {
+    await api.delete('/alerts');
   },
 };
 
