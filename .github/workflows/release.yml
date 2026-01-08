@@ -75,7 +75,7 @@ jobs:
       - name: Install system deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y binfmt-support qemu-user-static libarchive-tools rpm libfuse2
+          sudo apt-get install -y binfmt-support qemu-user-static libarchive-tools rpm libfuse2 libudev-dev
       - name: Install dependencies (root)
         run: npm ci
       - name: Install dependencies (frontend)
