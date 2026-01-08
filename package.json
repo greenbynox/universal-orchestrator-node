@@ -26,7 +26,8 @@
     "mac": {
       "target": "zip",
       "icon": "electron/assets/icon.icns"
-    }
+    },
+    "publish": null
   },
   "description": "Orchestrateur de Nodes Multi-Blockchains – Refonte Architecturale Data-Driven (77 Blockchain supportées sur 227)",
   "main": "electron/main.js",

@@ -23,9 +23,8 @@ jobs:
       - name: Build (ts/react)
         run: npm run build
       - name: Build electron (win)
-        run: npx electron-builder --win nsis portable --x64
+        run: npx electron-builder --win nsis portable --x64 -p never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - name: Ensure SHA256 file isn't locked
         run: |
@@ -84,9 +83,8 @@ jobs:
       - name: Build (ts/react)
         run: npm run build
       - name: Build electron (linux)
-        run: npx electron-builder --linux AppImage deb tar.gz --${{ matrix.arch }}
+        run: npx electron-builder --linux AppImage deb tar.gz --${{ matrix.arch }} -p never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - name: Generate SHA256
         run: |
@@ -123,9 +121,8 @@ jobs:
       - name: Build (ts/react)
         run: npm run build
       - name: Build electron (mac)
-        run: npx electron-builder --mac dmg zip --${{ matrix.arch }}
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} -p never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - name: Generate SHA256
         run: |
