@@ -24,7 +24,7 @@ function parseIntOr(value, fallback) {
 async function main() {
   const host = process.env.VITE_BACKEND_HOST || '127.0.0.1';
   const port = parseIntOr(process.env.VITE_BACKEND_PORT ?? process.env.PORT, 3001);
-  const timeoutMs = parseIntOr(process.env.WAIT_FOR_BACKEND_TIMEOUT_MS, 30_000);
+  const timeoutMs = parseIntOr(process.env.WAIT_FOR_BACKEND_TIMEOUT_MS, 90_000);
 
   const deadline = Date.now() + timeoutMs;
 
@@ -35,7 +35,7 @@ async function main() {
 
       const cleanup = () => {
         socket.removeAllListeners();
-        try { socket.destroy(); } catch {}
+        try { socket.destroy(); } catch { }
       };
 
       socket.setTimeout(1000);

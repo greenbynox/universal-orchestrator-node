@@ -15,6 +15,16 @@ export default function AlertsHistoryPage() {
     setItems(filtered as Alert[]);
   };
 
+  const handleClearHistory = async () => {
+    if (!confirm(t('alerts.clear_confirm') || 'Voulez-vous vraiment effacer tout l\'historique des alertes ?')) return;
+    try {
+      await alertsApi.deleteAll();
+      load();
+    } catch (error) {
+      console.error('Failed to clear alerts', error);
+    }
+  };
+
   useEffect(() => {
     void load();
   }, [resolved, severity]);
@@ -37,7 +47,14 @@ export default function AlertsHistoryPage() {
             <option value="null">{t('alerts.filter.all')}</option>
             <option value="false">{t('alerts.filter.active')}</option>
             <option value="true">{t('alerts.filter.resolved')}</option>
+            <option value="true">{t('alerts.filter.resolved')}</option>
           </select>
+          <button
+            onClick={handleClearHistory}
+            className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg border border-red-500/20 transition-colors text-sm font-medium"
+          >
+            {t('alerts.clear') || 'Effacer l\'historique'}
+          </button>
         </div>
       </div>
 
@@ -59,13 +76,12 @@ export default function AlertsHistoryPage() {
                 <td className="px-4 py-2 text-dark-400">{new Date(a.timestamp).toLocaleString(language === 'fr' ? 'fr-FR' : 'en-US')}</td>
                 <td className="text-white">{t(`alerts.type.${a.type}`)}</td>
                 <td>
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    a.severity === 'CRITICAL'
+                  <span className={`px-2 py-1 rounded text-xs ${a.severity === 'CRITICAL'
                       ? 'bg-red-500/20 text-red-400'
                       : a.severity === 'WARNING'
                         ? 'bg-amber-500/20 text-amber-400'
                         : 'bg-blue-500/20 text-blue-400'
-                  }`}>
+                    }`}>
                     {t(`alerts.severity.${a.severity}`)}
                   </span>
                 </td>

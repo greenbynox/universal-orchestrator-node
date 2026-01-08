@@ -49,6 +49,9 @@ export class AlertService {
       metadata: a.metadata ? JSON.parse(a.metadata as unknown as string) : undefined,
     }));
   }
+  async clearAll(): Promise<number> {
+    return alertManager.clearAll();
+  }
 }
 
 export const alertService = new AlertService();

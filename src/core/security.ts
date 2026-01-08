@@ -27,7 +27,7 @@ import { BlockchainType, NodeMode } from '../types';
  */
 function generateDockerImageWhitelist(): Set<string> {
   const whitelist = new Set<string>();
-  
+
   // Ajouter les images de base (registries courantes)
   const commonImages = [
     // Registries officielles courantes
@@ -40,14 +40,14 @@ function generateDockerImageWhitelist(): Set<string> {
     'inputoutput/cardano-node:latest',
     'cosmos/gaia:latest',
   ];
-  
+
   commonImages.forEach(img => whitelist.add(img));
-  
+
   // Ajouter toutes les images des blockchains configurées
   try {
     const { blockchainRegistry } = require('../config/blockchains');
     const chains = blockchainRegistry.getAll();
-    
+
     chains.forEach((chain: any) => {
       if (chain.docker?.images) {
         Object.values(chain.docker.images).forEach((image: any) => {
@@ -60,16 +60,67 @@ function generateDockerImageWhitelist(): Set<string> {
   } catch (error) {
     console.warn('Could not load blockchainRegistry for whitelist generation', error);
   }
-  
+
   return whitelist;
 }
 
 export const DOCKER_IMAGE_WHITELIST: Set<string> = generateDockerImageWhitelist();
 
 // Registries / prefixes autorisés (patterns)
+// These registries are trusted sources for blockchain node images
 export const DOCKER_REGISTRY_WHITELIST: string[] = [
+  // Universal Orchestrator
   'ghcr.io/universal-orchestrator/',
-  'kylemanna/',
+  // GitHub Container Registry (official blockchain repos)
+  'ghcr.io/bnb-chain/',
+  'ghcr.io/',
+  // Docker Hub official/verified publishers
+  'kylemanna/', // Bitcoin
+  'ethereum/', // Ethereum
+  'solanalabs/', // Solana
+  'parity/', // Polkadot
+  'inputoutput/', // Cardano
+  'cosmos/', // Cosmos
+  'nearprotocol/', // NEAR
+  'algorand/', // Algorand
+  'tezos/', // Tezos
+  'aptoslabs/', // Aptos
+  'mysten/', // Sui
+  'ton-blockchain/', // TON
+  'avaplatform/', // Avalanche
+  'maticnetwork/', // Polygon
+  'fantomfoundation/', // Fantom
+  'crypto-org-chain/', // Cronos
+  'nethermind/', // Gnosis
+  'us.gcr.io/celo-org/', // Celo
+  'purestake/', // Moonbeam
+  'offchainlabs/', // Arbitrum
+  'ethereumoptimism/', // Optimism
+  'coinbase/', // Base
+  'jitolabs/', // Jito (Solana MEV)
+  'zquestz/', // Bitcoin Cash
+  'bitcoinsv/', // Bitcoin SV
+  'uphold/', // Litecoin
+  'dogecoin/', // Dogecoin
+  'electriccoinco/', // Zcash
+  'dashpay/', // Dash
+  'zencash/', // Horizen
+  'bitcoingold/', // Bitcoin Gold
+  'ravencoincore/', // Ravencoin
+  'digibyte/', // DigiByte
+  'qtum/', // Qtum
+  'decred/', // Decred
+  'pivx/', // PIVX
+  'firoorg/', // Firo
+  'namecoin/', // Namecoin
+  'vertcoin/', // Vertcoin
+  'syscoin/', // Syscoin
+  'groestlcoin/', // Groestlcoin
+  'viacoin/', // Viacoin
+  'komodo/', // Komodo
+  'peercoin/', // Peercoin
+  'sethsimmons/', // Monero (community/verified)
+  'cosmoshub/',
 ];
 
 /**
@@ -110,12 +161,12 @@ export function isImageAllowed(image: string): boolean {
     logger.warn('Image Docker sans tag rejetée', { image });
     return false;
   }
-  
+
   // Vérifier la whitelist exacte
   if (DOCKER_IMAGE_WHITELIST.has(normalizedImage)) {
     return true;
   }
-  
+
   // Vérifier les patterns (pour les versions spécifiques)
   for (const pattern of DOCKER_IMAGE_PATTERNS) {
     if (pattern.test(normalizedImage)) {
@@ -128,7 +179,7 @@ export function isImageAllowed(image: string): boolean {
   if (registryAllowed) {
     return true;
   }
-  
+
   logger.warn('Image Docker non autorisée tentée', { image, normalizedImage });
   return false;
 }
@@ -158,24 +209,24 @@ export function validateDockerImage(image: string): void {
  */
 export function getValidatedDockerImage(blockchain: BlockchainType, mode: NodeMode): string {
   const chain = blockchainRegistry.get(blockchain);
-  
+
   if (!chain) {
     throw new Error(`Blockchain non supportée: ${blockchain}`);
   }
-  
+
   if (!chain.docker?.images) {
     throw new Error(`Blockchain non supportée en tant que node: ${blockchain}`);
   }
-  
+
   const image = chain.docker.images[mode];
-  
+
   if (!image) {
     throw new Error(`Mode "${mode}" non supporté pour ${blockchain}`);
   }
-  
+
   // Valider que l'image est dans la whitelist
   validateDockerImage(image);
-  
+
   return image;
 }
 
@@ -221,16 +272,16 @@ export function sanitizeInput(input: string): string {
   if (typeof input !== 'string') {
     return '';
   }
-  
+
   // Supprimer les caractères dangereux
   let sanitized = input.replace(DANGEROUS_CHARS, '');
-  
+
   // Limiter la longueur
   sanitized = sanitized.substring(0, 256);
-  
+
   // Trim
   sanitized = sanitized.trim();
-  
+
   return sanitized;
 }
 
@@ -243,19 +294,19 @@ export function sanitizeInput(input: string): string {
  */
 export function sanitizeNodeName(name: string): string {
   const sanitized = sanitizeInput(name);
-  
+
   if (!sanitized || sanitized.length < 1) {
     throw new Error('Le nom du node est requis');
   }
-  
+
   if (sanitized.length > 63) {
     throw new Error('Le nom du node ne doit pas dépasser 63 caractères');
   }
-  
+
   if (!VALID_NAME_PATTERN.test(sanitized)) {
     throw new Error('Le nom du node ne peut contenir que des lettres, chiffres, tirets et underscores');
   }
-  
+
   return sanitized;
 }
 
@@ -289,28 +340,28 @@ export function sanitizePath(filePath: string, basePath: string): string {
   if (!sanitized) {
     throw new Error('Chemin de fichier vide ou invalide');
   }
-  
+
   // Vérifier les tentatives de path traversal
   if (sanitized.includes('..') || sanitized.includes('//')) {
     logger.warn('Tentative de path traversal détectée', { filePath, basePath });
     throw new Error('Chemin de fichier invalide: path traversal détecté');
   }
-  
+
   // Vérifier le pattern
   if (!SAFE_PATH_PATTERN.test(sanitized)) {
     throw new Error('Chemin de fichier invalide: caractères non autorisés');
   }
-  
+
   // S'assurer que le chemin reste dans le basePath
   const resolvedPath = path.resolve(normalizedBase, sanitized);
   const resolvedBase = fs.realpathSync(normalizedBase);
   const resolvedTargetDir = path.resolve(resolvedPath, '..');
 
   if (!resolvedPath.startsWith(resolvedBase)) {
-    logger.warn('Tentative d\'accès hors du dossier autorisé', { 
-      filePath, 
-      basePath, 
-      resolvedPath 
+    logger.warn('Tentative d\'accès hors du dossier autorisé', {
+      filePath,
+      basePath,
+      resolvedPath
     });
     throw new Error('Accès au chemin non autorisé');
   }
@@ -322,7 +373,7 @@ export function sanitizePath(filePath: string, basePath: string): string {
     logger.warn('Permissions insuffisantes sur le dossier cible', { resolvedTargetDir });
     throw new Error('Permissions insuffisantes sur le dossier cible');
   }
-  
+
   return resolvedPath;
 }
 
@@ -335,16 +386,16 @@ export function sanitizePath(filePath: string, basePath: string): string {
  */
 export function validatePort(port: number): number {
   const portNum = Math.floor(Number(port));
-  
+
   if (isNaN(portNum) || portNum < 1024 || portNum > 65535) {
     throw new Error('Port invalide. Doit être entre 1024 et 65535');
   }
-  
+
   // Ports réservés à éviter
   if (RESERVED_PORTS.has(portNum)) {
     throw new Error(`Port ${portNum} réservé par le système`);
   }
-  
+
   return portNum;
 }
 
@@ -357,13 +408,13 @@ export function validatePort(port: number): number {
  */
 export function validateHost(host: string): string {
   const sanitized = sanitizeInput(host);
-  
+
   // Pattern pour IPv4
   const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}$/;
-  
+
   // Pattern pour hostname simple
   const hostnamePattern = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  
+
   if (ipv4Pattern.test(sanitized)) {
     // Valider les octets IPv4
     const octets = sanitized.split('.').map(Number);
@@ -373,11 +424,11 @@ export function validateHost(host: string): string {
       return sanitized;
     }
   }
-  
+
   if (hostnamePattern.test(sanitized) && sanitized.length <= 253) {
     return sanitized;
   }
-  
+
   throw new Error('Adresse hôte invalide');
 }
 
@@ -390,11 +441,11 @@ export function validateHost(host: string): string {
  */
 export function validateBlockchainType(blockchain: string): BlockchainType {
   const sanitized = sanitizeInput(blockchain).toLowerCase();
-  
+
   if (!blockchainRegistry.get(sanitized)) {
     throw new Error(`Blockchain non supportee: ${blockchain}`);
   }
-  
+
   return sanitized as BlockchainType;
 }
 
@@ -408,11 +459,11 @@ export function validateBlockchainType(blockchain: string): BlockchainType {
 export function validateNodeMode(mode: string): NodeMode {
   const sanitized = sanitizeInput(mode).toLowerCase();
   const validModes: NodeMode[] = ['full', 'pruned', 'light'];
-  
+
   if (!validModes.includes(sanitized as NodeMode)) {
     throw new Error(`Mode de node invalide: ${mode}. Modes valides: ${validModes.join(', ')}`);
   }
-  
+
   return sanitized as NodeMode;
 }
 
@@ -474,10 +525,10 @@ export function validateCreateNodeRequest(request: {
   // Valider le nom (optionnel). Si aucun nom fourni, on génère un nom par défaut.
   const defaultName = `${blockchain.charAt(0).toUpperCase()}${blockchain.slice(1)} Node`;
   const name = request.name ? sanitizeNodeName(request.name) : defaultName;
-  
+
   // Valider l'image Docker associée
   getValidatedDockerImage(blockchain, mode);
-  
+
   // Valider les ports si fournis
   const result: {
     name: string;
@@ -487,22 +538,22 @@ export function validateCreateNodeRequest(request: {
     p2pPort?: number;
     wsPort?: number;
   } = { name, blockchain, mode };
-  
+
   if (request.rpcPort !== undefined) {
     result.rpcPort = validatePort(request.rpcPort);
   }
-  
+
   if (request.p2pPort !== undefined) {
     result.p2pPort = validatePort(request.p2pPort);
   }
-  
+
   if (request.wsPort !== undefined) {
     result.wsPort = validatePort(request.wsPort);
   }
-  
+
   // Audit log
   auditLog('CREATE_NODE_VALIDATED', { name, blockchain, mode });
-  
+
   return result;
 }
 
@@ -512,19 +563,19 @@ export default {
   validateDockerImage,
   getValidatedDockerImage,
   DOCKER_IMAGE_WHITELIST,
-  
+
   // Input sanitization
   sanitizeInput,
   sanitizeNodeName,
   sanitizePath,
-  
+
   // Validation
   validatePort,
   validateHost,
   validateBlockchainType,
   validateNodeMode,
   validateCreateNodeRequest,
-  
+
   // Audit
   auditLog,
 };
