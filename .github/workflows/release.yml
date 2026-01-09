@@ -26,6 +26,8 @@ jobs:
         run: npx electron-builder --win nsis portable --x64 -p never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Wait to ensure all file handles are released
+        run: Start-Sleep -Seconds 5
       - name: Ensure release directory exists
         run: |
           if (!(Test-Path release)) {
@@ -33,8 +35,21 @@ jobs:
           }
       - name: Ensure SHA256 file isn't locked
         run: |
-          if (Test-Path release/SHA256SUMS-windows.txt) {
-            Remove-Item release/SHA256SUMS-windows.txt -Force -ErrorAction SilentlyContinue
+          $retries = 5
+          for ($i=0; $i -lt $retries; $i++) {
+            try {
+              if (Test-Path release/SHA256SUMS-windows.txt) {
+                Remove-Item release/SHA256SUMS-windows.txt -Force -ErrorAction Stop
+              }
+              break
+            } catch {
+              if ($i -lt $retries - 1) {
+                Write-Host "Attempt $($i+1) to delete SHA256 file failed, retrying in 2 seconds..."
+                Start-Sleep -Seconds 2
+              } else {
+                throw $_
+              }
+            }
           }
       - name: Generate SHA256
         run: |
