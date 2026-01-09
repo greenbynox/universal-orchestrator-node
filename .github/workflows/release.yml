@@ -26,6 +26,11 @@ jobs:
         run: npx electron-builder --win nsis portable --x64 -p never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Ensure release directory exists
+        run: |
+          if (!(Test-Path release)) {
+            throw "Release directory does not exist. Build may have failed."
+          }
       - name: Ensure SHA256 file isn't locked
         run: |
           if (Test-Path release/SHA256SUMS-windows.txt) {
@@ -86,6 +91,12 @@ jobs:
         run: npx electron-builder --linux AppImage deb tar.gz --${{ matrix.arch }} -p never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Ensure release directory exists
+        run: |
+          if [ ! -d "release" ]; then
+            echo "Release directory does not exist. Build may have failed."
+            exit 1
+          fi
       - name: Generate SHA256
         run: |
           find release -maxdepth 1 -type f -printf '%f\n' | while read f; do
@@ -124,6 +135,12 @@ jobs:
         run: npx electron-builder --mac dmg zip --${{ matrix.arch }} -p never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Ensure release directory exists
+        run: |
+          if [ ! -d "release" ]; then
+            echo "Release directory does not exist. Build may have failed."
+            exit 1
+          fi
       - name: Generate SHA256
         run: |
           cd release
