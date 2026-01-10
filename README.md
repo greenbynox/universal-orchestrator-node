@@ -12,13 +12,12 @@
 [![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](tests/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Free](https://img.shields.io/badge/Price-100%25%20FREE-brightgreen.svg)]()
-[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA.svg)](https://discord.gg/AH93eHVQGU)
 
 <br>
 
 🎉 **100% GRATUIT** - Aucune limite, aucune version payante. Ce projet est fait par et pour la communauté blockchain.
 
-[📥 Télécharger](#-téléchargement) • [📖 Documentation](#-utilisation) • [🤝 Contribuer](#-contribution) • [💬 Discord](https://discord.gg/AH93eHVQGU) • [🐛 Issues](https://github.com/greenbynox/universal-orchestrator-node/issues)
+[📥 Télécharger](#-téléchargement) • [📖 Documentation](#-utilisation) • [🤝 Contribuer](#-contribution) • [🐛 Issues](https://github.com/greenbynox/universal-orchestrator-node/issues)
 
 </div>
 
