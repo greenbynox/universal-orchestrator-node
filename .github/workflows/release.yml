@@ -76,7 +76,7 @@ jobs:
           $retries = 5
           for ($i=0; $i -lt $retries; $i++) {
             try {
-              Get-ChildItem release -File | ForEach-Object {
+              Get-ChildItem release -File | Where-Object { $_.Name -ne "SHA256SUMS-windows.txt" } | ForEach-Object {
                 (Get-FileHash $_.FullName -Algorithm SHA256).Hash + "  " + $_.Name
               } | Out-File -Encoding ascii release/SHA256SUMS-windows.txt
               Write-Host "SHA256 generated successfully"
