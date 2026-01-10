@@ -18,6 +18,18 @@
       "node_modules/.prisma/**",
       "node_modules/@prisma/**"
     ],
+    "extraResources": [
+      {
+        "from": "node_modules/.prisma/client",
+        "to": "node_modules/.prisma/client",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/@prisma",
+        "to": "node_modules/@prisma",
+        "filter": ["**/*"]
+      }
+    ],
     "win": {
       "target": "portable",
       "icon": "electron/assets/icon.ico"
