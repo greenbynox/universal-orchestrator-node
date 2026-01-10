@@ -60,7 +60,7 @@ jobs:
           name: Node-Orchestrator-Windows
           path: |
             release/*.exe
-          retention-days: 30
+          retention-days: 1
 
   # ============================================================
   # BUILD MACOS EXECUTABLE
@@ -107,7 +107,7 @@ jobs:
           path: |
             release/*.dmg
             release/*.zip
-          retention-days: 30
+          retention-days: 1
 
   # ============================================================
   # BUILD LINUX EXECUTABLE (x64 + ARM64)
@@ -157,4 +157,4 @@ jobs:
             release/*.AppImage
             release/*.deb
             release/*.tar.gz
-          retention-days: 30
+          retention-days: 1
