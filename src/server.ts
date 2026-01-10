@@ -274,7 +274,11 @@ async function waitForDocker(): Promise<void> {
       })()
     : 'Vérifiez que Docker est démarré (Docker Desktop OU Docker Engine dans WSL2).';
   logger.error(`Docker indisponible après ${maxAttempts} tentatives. ${guidance}`);
-  throw new Error('Docker requis mais indisponible');
+  // Do not throw here to avoid crashing the entire app on machines without Docker.
+  // Historically we exited, but for a packaged desktop app we prefer to continue
+  // in a degraded mode and log a clear warning so users can use the app without Docker.
+  logger.warn('Docker requis mais indisponible — démarrage en mode dégradé sans Docker.');
+  return;
 }
 
 // ============================================================
