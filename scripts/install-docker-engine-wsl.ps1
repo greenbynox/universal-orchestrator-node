@@ -136,7 +136,7 @@ sudo mkdir -p /etc/systemd/system/docker.service.d
 cat >/etc/systemd/system/docker.service.d/override.conf <<EOF
 [Service]
 ExecStart=
-ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375 --containerd=/run/containerd/containerd.sock
+ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock -H tcp://127.0.0.1:2375 --containerd=/run/containerd/containerd.sock
 EOF'
 '@
   Run-InWsl $DistroName $overrideCmd
@@ -153,7 +153,8 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o 
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt-get update -y
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+# Install minimal Docker Engine packages only
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 '@
 
   Run-InWsl $DistroName ($installCmd.Replace("\r\n", "\n").Replace("\n", "; "))
