@@ -78,6 +78,7 @@ jobs:
             release/*.exe
             release/*.blockmap
             release/SHA256SUMS-windows.txt
+          retention-days: 1
 
   build-linux:
     name: Linux (${{ matrix.arch }})
@@ -126,6 +127,7 @@ jobs:
             release/*.deb
             release/*.tar.gz
             release/SHA256SUMS-linux-${{ matrix.arch }}.txt
+          retention-days: 1
 
   build-macos:
     name: macOS (${{ matrix.arch }})
@@ -172,6 +174,7 @@ jobs:
             release/*.dmg
             release/*.zip
             release/SHA256SUMS-macos-${{ matrix.arch }}.txt
+          retention-days: 1
 
   release:
     name: Create GitHub Release

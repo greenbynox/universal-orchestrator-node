@@ -124,7 +124,7 @@ jobs:
           path: |
             dist/
             frontend/dist/
-          retention-days: 7
+          retention-days: 1
 
   # ============================================================
   # SECURITY SCAN
