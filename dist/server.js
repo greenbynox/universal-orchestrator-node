@@ -192,7 +192,11 @@ exports.wsHandler = wsHandler;
 // ============================================================
 async function waitForDocker() {
     const forceDocker = process.env.FORCE_DOCKER === 'true';
-    const skipDockerCheck = process.env.SKIP_DOCKER_CHECK === 'true';
+    // If running inside the packaged Electron app, default to skipping Docker checks
+    // unless FORCE_DOCKER=true is explicitly set. This allows the desktop EXE to run
+    // on machines without Docker by default.
+    const defaultSkipForElectron = !!process.env.ELECTRON_RUN_AS_NODE && process.env.FORCE_DOCKER !== 'true';
+    const skipDockerCheck = process.env.SKIP_DOCKER_CHECK === 'true' || defaultSkipForElectron;
     const dockerHost = process.env.DOCKER_HOST;
     const { getDockerConnectionAttempts } = require('./utils/dockerConnection');
     const connAttempts = getDockerConnectionAttempts();
