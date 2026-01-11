@@ -290,7 +290,31 @@ async function waitForDocker(): Promise<void> {
 // ============================================================
 
 // Wait for Docker before starting server
-waitForDocker().then(() => {
+// Helper: kill process using a port (Windows only)
+import child_process from 'child_process';
+async function killProcessOnPort(port: number) {
+  if (process.platform !== 'win32') return;
+  try {
+    // netstat -ano | findstr :<port>
+    const netstat = child_process.execSync(`netstat -ano | findstr :${port}`);
+    const lines = netstat.toString().split('\n');
+    for (const line of lines) {
+      const m = line.match(/\s*TCP\s+[^:]+:${port}\s+[^\s]+\s+LISTENING\s+(\d+)/);
+      if (m && m[1]) {
+        const pid = m[1];
+        if (Number(pid) !== process.pid) {
+          console.log(`[server] Killing process on port ${port} (PID ${pid})...`);
+          child_process.execSync(`taskkill /PID ${pid} /F`);
+        }
+      }
+    }
+  } catch (e) {
+    // No process found or error
+    // console.log('[server] No process to kill on port', port, e);
+  }
+}
+
+waitForDocker().then(async () => {
   const isLoopbackHost = (host: string): boolean => {
     const h = (host || '').trim().toLowerCase();
     return h === '127.0.0.1' || h === 'localhost' || h === '::1';
@@ -309,6 +333,8 @@ waitForDocker().then(() => {
     process.exit(1);
   }
 
+  // Kill process on port if needed (Windows only)
+  await killProcessOnPort(config.server.port);
   httpServer.listen(config.server.port, config.server.host, () => {
     logger.info(`
 ╔════════════════════════════════════════════════════════════╗
