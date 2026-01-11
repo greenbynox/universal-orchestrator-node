@@ -10,6 +10,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
+import net from 'net';
 import path from 'path';
 
 import { config } from './config';
@@ -314,6 +315,31 @@ async function killProcessOnPort(port: number) {
   }
 }
 
+/**
+ * Find a free port starting from basePort (tries basePort, basePort+1, ...)
+ * Resolves with the first available port.
+ */
+function findFreePort(basePort: number, maxTries = 20): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let port = basePort;
+    let tries = 0;
+    function tryPort() {
+      if (tries >= maxTries) return reject(new Error('No free port found'));
+      const server = net.createServer();
+      server.unref();
+      server.on('error', () => {
+        port++;
+        tries++;
+        tryPort();
+      });
+      server.listen(port, () => {
+        server.close(() => resolve(port));
+      });
+    }
+    tryPort();
+  });
+}
+
 waitForDocker().then(async () => {
   const isLoopbackHost = (host: string): boolean => {
     const h = (host || '').trim().toLowerCase();
@@ -334,16 +360,25 @@ waitForDocker().then(async () => {
   }
 
   // Kill process on port if needed (Windows only)
-  await killProcessOnPort(config.server.port);
-  httpServer.listen(config.server.port, config.server.host, () => {
+  let chosenPort = config.server.port;
+  try {
+    chosenPort = await findFreePort(config.server.port, 20);
+    if (chosenPort !== config.server.port) {
+      console.log(`[server] Port ${config.server.port} occupé, utilisation du port libre ${chosenPort}`);
+    }
+  } catch (e) {
+    console.error('[server] Aucun port libre trouvé à partir de', config.server.port, e);
+    process.exit(1);
+  }
+  httpServer.listen(chosenPort, config.server.host, () => {
     logger.info(`
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
 ║     🚀 NODE ORCHESTRATOR - MVP                             ║
 ║                                                            ║
-║     Server:    http://${config.server.host}:${config.server.port}                     ║
-║     API:       http://${config.server.host}:${config.server.port}/api                 ║
-║     WebSocket: ws://${config.server.host}:${config.server.port}                       ║
+║     Server:    http://${config.server.host}:${chosenPort}                     ║
+║     API:       http://${config.server.host}:${chosenPort}/api                 ║
+║     WebSocket: ws://${config.server.host}:${chosenPort}                       ║
 ║     Mode:      ${config.env.toUpperCase().padEnd(42)}║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
