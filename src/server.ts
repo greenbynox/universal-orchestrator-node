@@ -16,6 +16,7 @@ import path from 'path';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { nodesRouter, walletsRouter, systemRouter } from './api';
+import { setCurrentPort } from './api/system';
 import { WebSocketHandler } from './websocket';
 import { nodeManager } from './core/NodeManager';
 import { requireAuth } from './utils/auth';
@@ -370,6 +371,7 @@ waitForDocker().then(async () => {
     console.error('[server] Aucun port libre trouvé à partir de', config.server.port, e);
     process.exit(1);
   }
+  setCurrentPort(chosenPort);
   httpServer.listen(chosenPort, config.server.host, () => {
     logger.info(`
 ╔════════════════════════════════════════════════════════════╗

@@ -1,3 +1,6 @@
+// Port exposé dynamiquement par server.ts
+let currentPort: number | undefined = undefined;
+export function setCurrentPort(port: number) { currentPort = port; }
 /**
  * ============================================================
  * NODE ORCHESTRATOR - System API Routes
@@ -129,7 +132,7 @@ router.get('/recommendations', async (_req: Request, res: Response) => {
 });
 
 // ============================================================
-// GET /system/health - Health check
+// GET /system/health - Health check (inclut port courant)
 // ============================================================
 router.get('/health', async (_req: Request, res: Response) => {
   res.json({
@@ -137,7 +140,8 @@ router.get('/health', async (_req: Request, res: Response) => {
     data: {
       status: 'healthy',
       uptime: process.uptime(),
-      version: '2.2.0',
+      version: '2.3.1',
+      port: currentPort,
     },
     timestamp: new Date(),
   });
