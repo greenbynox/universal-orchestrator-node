@@ -43,7 +43,7 @@ jobs:
       - name: Build (ts/react)
         run: npm run build
       - name: Build electron (win)
-        run: npx electron-builder --win nsis portable --x64 -p never
+        run: npx electron-builder --win nsis --x64 -p never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - name: Wait to ensure all file handles are released
@@ -128,7 +128,7 @@ jobs:
       - name: Build (ts/react)
         run: npm run build
       - name: Build electron (linux)
-        run: npx electron-builder --linux AppImage deb tar.gz --${{ matrix.arch }} -p never
+        run: npx electron-builder --linux AppImage deb --${{ matrix.arch }} -p never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - name: Ensure release directory exists
@@ -149,7 +149,6 @@ jobs:
           files: |
             release/*.AppImage
             release/*.deb
-            release/*.tar.gz
             release/SHA256SUMS-linux-${{ matrix.arch }}.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -177,7 +176,7 @@ jobs:
       - name: Build (ts/react)
         run: npm run build
       - name: Build electron (mac)
-        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} -p never
+        run: npx electron-builder --mac dmg --${{ matrix.arch }} -p never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - name: Ensure release directory exists
@@ -200,7 +199,6 @@ jobs:
         with:
           files: |
             release/*.dmg
-            release/*.zip
             release/SHA256SUMS-macos-${{ matrix.arch }}.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
