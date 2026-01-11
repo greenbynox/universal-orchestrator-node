@@ -106,6 +106,7 @@ export default function SettingsPage() {
     status: string;
     uptime: number;
     version: string;
+    port?: number;
   } | null>(null);
   const [dockerStatus, setDockerStatus] = useState<{
     available: boolean;
@@ -172,7 +173,8 @@ export default function SettingsPage() {
         setSystemHealth({
           status: 'healthy',
           uptime: 0,
-          version: '2.2.0'
+          version: '2.2.0',
+          port: undefined
         });
       }
     };
@@ -420,6 +422,13 @@ export default function SettingsPage() {
             <p className="text-sm text-dark-400 mb-1">Version</p>
             <p className="text-white font-medium">v{systemHealth?.version || '2.2.0'}</p>
           </div>
+            {/* Backend Port Display */}
+            <div className="bg-dark-900 rounded-lg p-4">
+              <p className="text-sm text-dark-400 mb-1">Backend Port</p>
+              <p className="text-white font-medium">
+                {systemHealth?.port ? systemHealth.port : 'N/A'}
+              </p>
+            </div>
         </div>
       </motion.div>
 

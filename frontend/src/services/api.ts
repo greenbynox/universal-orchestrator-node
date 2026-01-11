@@ -310,6 +310,7 @@ export const systemApi = {
     status: string;
     uptime: number;
     version: string;
+    port?: number;
   }> => {
     const { data } = await api.get('/system/health');
     return data.data;
