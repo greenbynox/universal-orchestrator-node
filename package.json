@@ -1,6 +1,6 @@
 {
   "name": "node-orchestrator",
-  "version": "2.3.3",
+  "version": "2.3.1",
   "build": {
     "appId": "com.node.orchestrator",
     "productName": "Node Orchestrator",
@@ -42,8 +42,7 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowElevation": true,
-      "include": "electron/installer.nsh"
+      "allowElevation": true
     },
     "linux": {
       "target": "AppImage",
