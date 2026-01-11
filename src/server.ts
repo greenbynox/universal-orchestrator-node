@@ -360,35 +360,40 @@ waitForDocker().then(async () => {
     process.exit(1);
   }
 
-  // Kill process on port if needed (Windows only)
-  let chosenPort = config.server.port;
-  try {
-    chosenPort = await findFreePort(config.server.port, 20);
-    if (chosenPort !== config.server.port) {
-      console.log(`[server] Port ${config.server.port} occupé, utilisation du port libre ${chosenPort}`);
+    // Nouvelle logique : kill process sur chaque port et tenter les suivants
+    let chosenPort = config.server.port;
+    let found = false;
+    for (let i = 0; i < 20; i++) {
+      try {
+        await killProcessOnPort(chosenPort);
+        chosenPort = await findFreePort(chosenPort, 1);
+        setCurrentPort(chosenPort);
+        httpServer.listen(chosenPort, config.server.host, () => {
+          logger.info(`
+  ╔════════════════════════════════════════════════════════════╗
+  ║                                                            ║
+  ║     🚀 NODE ORCHESTRATOR - MVP                             ║
+  ║                                                            ║
+  ║     Server:    http://${config.server.host}:${chosenPort}                     ║
+  ║     API:       http://${config.server.host}:${chosenPort}/api                 ║
+  ║     WebSocket: ws://${config.server.host}:${chosenPort}                       ║
+  ║     Mode:      ${config.env.toUpperCase().padEnd(42)}║
+  ║                                                            ║
+  ╚════════════════════════════════════════════════════════════╝
+          `);
+          pruningService.start();
+        });
+        found = true;
+        break;
+      } catch (e) {
+        logger.warn(`[server] Port ${chosenPort} indisponible (${e.message || e}), tentative suivante...`);
+        chosenPort++;
+      }
     }
-  } catch (e) {
-    console.error('[server] Aucun port libre trouvé à partir de', config.server.port, e);
-    process.exit(1);
-  }
-  setCurrentPort(chosenPort);
-  httpServer.listen(chosenPort, config.server.host, () => {
-    logger.info(`
-╔════════════════════════════════════════════════════════════╗
-║                                                            ║
-║     🚀 NODE ORCHESTRATOR - MVP                             ║
-║                                                            ║
-║     Server:    http://${config.server.host}:${chosenPort}                     ║
-║     API:       http://${config.server.host}:${chosenPort}/api                 ║
-║     WebSocket: ws://${config.server.host}:${chosenPort}                       ║
-║     Mode:      ${config.env.toUpperCase().padEnd(42)}║
-║                                                            ║
-╚════════════════════════════════════════════════════════════╝
-    `);
-
-    // Start background services
-    pruningService.start();
-  });
+    if (!found) {
+      logger.error('[server] Aucun port libre trouvé après 20 tentatives. Abandon.');
+      process.exit(1);
+    }
 }).catch(error => {
   logger.error('Erreur lors de l\'attente de Docker', { error });
   process.exit(1);
