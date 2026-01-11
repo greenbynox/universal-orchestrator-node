@@ -1,3 +1,86 @@
+name: CI Multi-platform Release
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional release tag'
+        required: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            arch: x64
+            target: --win --x64
+          - os: windows-latest
+            arch: arm64
+            target: --win --arm64
+          - os: ubuntu-latest
+            arch: x64
+            target: --linux --x64
+          - os: macos-latest
+            arch: x64
+            target: --mac --x64
+          - os: macos-latest
+            arch: arm64
+            target: --mac --arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run electron-builder
+        run: npx electron-builder ${{ matrix.target }} --publish never
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}-${{ matrix.arch }}
+          path: release/**
+
+  create_release:
+    name: Create Release and attach artifacts
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Consolidate artifacts
+        run: |
+          mkdir -p release_all
+          # move any build-* artifact dirs into release_all
+          for d in $(ls -1); do
+            if [[ "$d" == build-* ]]; then
+              mv "$d" release_all/ || true
+            fi
+          done
+          tar -czf release_all_${{ github.run_id }}.tar.gz release_all || true
+
+      - name: Create GitHub Release and upload consolidated artifact
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.tag || format('ci-{0}', github.run_id) }}
+          name: Automated release ${{ github.run_id }}
+          files: release_all_${{ github.run_id }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 name: Release
 
 on:
