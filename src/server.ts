@@ -386,7 +386,13 @@ waitForDocker().then(async () => {
         found = true;
         break;
       } catch (e) {
-        logger.warn(`[server] Port ${chosenPort} indisponible (${e.message || e}), tentative suivante...`);
+        let msg = '';
+        if (typeof e === 'object' && e && 'message' in e) {
+          msg = (e as Error).message;
+        } else {
+          msg = String(e);
+        }
+        logger.warn(`[server] Port ${chosenPort} indisponible (${msg}), tentative suivante...`);
         chosenPort++;
       }
     }
