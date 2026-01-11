@@ -60,17 +60,10 @@
     "license": "LICENSE",
     "artifactName": "${productName}-${version}-Setup.${ext}"
   },
-  "portable": {
-    "artifactName": "${productName}-${version}-Portable.${ext}"
-  },
   "mac": {
     "target": [
       {
         "target": "dmg",
-        "arch": ["x64", "arm64"]
-      },
-      {
-        "target": "zip",
         "arch": ["x64", "arm64"]
       }
     ],
@@ -105,10 +98,6 @@
       },
       {
         "target": "deb",
-        "arch": ["x64", "arm64"]
-      },
-      {
-        "target": "tar.gz",
         "arch": ["x64", "arm64"]
       }
     ],
