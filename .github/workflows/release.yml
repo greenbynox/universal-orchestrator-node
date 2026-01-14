@@ -1,5 +1,5 @@
-name: CI Multi-platform Release
 
+name: CI Multi-platform Release
 on:
   push:
     branches: [ master ]
