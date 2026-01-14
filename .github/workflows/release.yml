@@ -87,6 +87,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional release tag'
+        required: false
 
 jobs:
   create-release:
